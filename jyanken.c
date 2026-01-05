@@ -1,4 +1,4 @@
-/* sample cpde */
+/* sample code */
 #include <stdio.h>
 #include <stdlib.h>
 #include <conio.h>
