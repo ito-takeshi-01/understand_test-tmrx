@@ -1,4 +1,5 @@
-/* sample code : test 08 */
+/* sample code : test 09 */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <conio.h>
