@@ -1,0 +1,5 @@
+UND_DB_DIR="cgit-${GIT_COMMIT}.und"
+UND_DB_ARCHIVE="${UND_DB_DIR}.tar.gz"
+
+PREV_UND_DB_DIR="cgit-${PREV_COMMIT}.und"
+PREV_UND_DB_ARCHIVE="${PREV_UND_DB_DIR}.tar.gz"

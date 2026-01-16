@@ -1,0 +1,3 @@
+machine ${NEXUS_HOST}
+login ${NEXUS_USER}
+password ${NEXUS_PASSWORD}
