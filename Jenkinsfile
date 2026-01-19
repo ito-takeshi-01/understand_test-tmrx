@@ -22,8 +22,8 @@ pipeline {
       //メインブランチにプッシュされたまたはメインブランチへマージするプルリクストが発行された場合に実行する
       when {
         anyOf { 
-          branch 'main'
-          changeRequest target: 'main'
+          branch 'master'
+          changeRequest target: 'master'
         }
       }
       steps {
@@ -36,7 +36,7 @@ pipeline {
     }
     stage('Pull Request Review') {
       when {
-        changeRequest target: 'main'
+        changeRequest target: 'master'
       }
       steps {
         powershell '''
