@@ -10,7 +10,7 @@ pipeline {
                                                                       //  (※予めJenkinsの設定＞Crdentialで設定が必要、またCredentialのIDの名称を同じ(例 GITHUB_CRED)にする必要あり)
     GITHUB_URL  = "https://github.com/ito-takeshi-01/understand_test" // GitHubリポジトリ設定 　 ※個別に設定が必要
     STORAGESERVICE = 'local'                                          // ストレージサービスの設定
-    LOCAL_STORAGE_PATH = "C:\\work\understand_data\test_prj"          // ローカルストレージ設定 　※個別に設定が必要
+    LOCAL_STORAGE_PATH = "C:\\work\\understand_data\\test_prj"          // ローカルストレージ設定 　※個別に設定が必要
   }
 
   options {
