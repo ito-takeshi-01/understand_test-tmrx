@@ -48,7 +48,7 @@ pipeline {
   }
   post {
     cleanup {
-      powershell './understand/clean.ps1'
+      powershell './understand/clean.sh'
     }
   }
 }
