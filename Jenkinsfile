@@ -4,6 +4,11 @@ pipeline {
     label 'windows && understand'
   }
 
+  // 手動実行時に条件を制御できるようにする
+  parameters {
+    booleanParam(name: 'RUN_ALWAYS', defaultValue: false, description: '常にこのパイプラインを実行する')
+  }
+
   environment {
     GITSERVICE = 'github2'
     GITHUB_CRED = credentials('GITHUB_CRED')                          // JenkinsのCredential設定より、GitHubの資格情報IDを取得する
@@ -13,8 +18,9 @@ pipeline {
     LOCAL_STORAGE_PATH = "C:\\work\\understand_data\\test_prj"          // ローカルストレージ設定 　※個別に設定が必要
   }
 
+  // 過去n回のビルドログを保持し、古いログを自動的に削除
   options {
-    buildDiscarder logRotator(numToKeepStr: '10')
+    buildDiscarder logRotator(numToKeepStr: '5')
   }
 
   stages {
@@ -22,8 +28,9 @@ pipeline {
       //メインブランチにプッシュされたまたはメインブランチへマージするプルリクストが発行された場合に実行する
       when {
         anyOf { 
-          branch 'master'
-          changeRequest target: 'master'
+          branch 'master'                  // GitHubのブランチがmasterの場合
+          changeRequest target: 'master'   // PRのターゲットがmasterの場合
+          expression { params.RUN_ALWAYS } // 手動実行時に常に実行
         }
       }
       steps {
@@ -36,7 +43,8 @@ pipeline {
     }
     stage('Pull Request Review') {
       when {
-        changeRequest target: 'master'
+        changeRequest target: 'master'   // PRのターゲットがmasterの場合
+        expression { params.RUN_ALWAYS } // 手動実行時に常に実行
       }
       steps {
         powershell '''
