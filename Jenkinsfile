@@ -15,7 +15,11 @@ pipeline {
                                                                       //  (※予めJenkinsの設定＞Crdentialで設定が必要、またCredentialのIDの名称を同じ(例 GITHUB_CRED)にする必要あり)
     GITHUB_URL  = "https://github.com/ito-takeshi-01/understand_test" // GitHubリポジトリ設定 　 ※個別に設定が必要
     STORAGESERVICE = 'local'                                          // ストレージサービスの設定
-    LOCAL_STORAGE_PATH = "C:\\work\\understand_data\\test_prj"          // ローカルストレージ設定 　※個別に設定が必要
+    LOCAL_STORAGE_PATH = "C:\\work\\understand_data\\test_prj"        // ローカルストレージ設定 　※個別に設定が必要
+    
+    // Git Bashのパスと作業ディレクトリ
+    GIT_BASH_PATH = "C:\\Program Files\\Git\\bin\\bash.exe"           // ※個別に設定が必要
+    WORK_DIR = "/c/Users/yourname/path/to/understand"                 // 実際のパスに置き換えが必要
   }
 
   // 過去n回のビルドログを保持し、古いログを自動的に削除
@@ -34,11 +38,13 @@ pipeline {
         }
       }
       steps {
-        // Windows PowerShellを使用
-        powershell '''
-        Write-Output $Env:PATH
-        bash ./understand/analyze.sh --upload
-        '''
+        // Git Bashを呼び出してコマンド実行
+        bat """
+        "${GIT_BASH_PATH}" -c "
+        cd ${WORK_DIR}
+        ./understand/analyze.sh --upload
+        "
+        """
       }
     }
     stage('Pull Request Review') {
@@ -47,13 +53,19 @@ pipeline {
         expression { params.RUN_ALWAYS } // 手動実行時に常に実行
       }
       steps {
-        powershell '''
-        bash ./understand/generate-graphs.sh > review-comment.txt
-        bash ./understand/review-pr.sh review-comment.txt
+        // Git Bashを呼び出してコマンド実行
+        bat """
+        "${GIT_BASH_PATH}" -c "
+        cd ${WORK_DIR}
+        ./understand/generate-graphs.sh > review-comment.txt
+        ./understand/review-pr.sh review-comment.txt
+        "
+        """./understand/review-pr.sh review-comment.txt
         '''
       }
     }
   }
+  
   post {
     cleanup {
       powershell './understand/clean.sh'
