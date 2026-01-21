@@ -40,8 +40,7 @@ pipeline {
       steps {
         // Git Bashを呼び出してコマンド実行
         bat """
-        "${GIT_BASH_PATH}" -c "
-        cd ${WORK_DIR} && \\\\
+        "${GIT_BASH_PATH}" -c "cd ${WORK_DIR} && \\\\
         ./understand/generate-graphs.sh > review-comment.txt && \\\\
         ./understand/review-pr.sh review-comment.txt
         "
@@ -56,8 +55,7 @@ pipeline {
       steps {
         // Git Bashを呼び出してコマンド実行
         bat """
-        "${GIT_BASH_PATH}" -c "
-        cd ${WORK_DIR} && \\\\
+        "${GIT_BASH_PATH}" -c "cd ${WORK_DIR} && \\\\
         ./understand/generate-graphs.sh > review-comment.txt && \\\\
         ./understand/review-pr.sh review-comment.txt
         "
