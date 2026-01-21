@@ -1,9 +1,10 @@
 #!/bin/sh -eux
 
 # 外部スクリプトの読み込み
+. "${0%/*}/variables"
 . "${0%/*}/gitservice/${GITSERVICE}.sh"
 . "${0%/*}/storage/${STORAGESERVICE}.sh"
-. "${0%/*}/variables"
+#. "${0%/*}/variables"
 
 # 前回の解析データを取得
 if get_analysis_data "${GIT_REPO_OWNER}" "${GIT_REPO_NAME}" "${PREV_COMMIT}" "${PREV_UND_DB_ARCHIVE}"
