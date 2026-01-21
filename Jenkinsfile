@@ -38,12 +38,9 @@ pipeline {
         }
       }
       steps {
-        // Git Bashを呼び出してコマンド実行
+        // Git Bashを呼び出してコマンド実行(generate-graphs.sh, review-pr.sh)
         bat """
-        "${GIT_BASH_PATH}" -c "cd ${WORK_DIR} && \\\\
-        ./understand/generate-graphs.sh > review-comment.txt && \\\\
-        ./understand/review-pr.sh review-comment.txt
-        "
+        "${GIT_BASH_PATH}" -c "cd ${WORK_DIR} && ./understand/generate-graphs.sh > review-comment.txt && ./understand/review-pr.sh review-comment.txt"
         """
       }
     }
@@ -53,12 +50,9 @@ pipeline {
         expression { params.RUN_ALWAYS } // 手動実行時に常に実行
       }
       steps {
-        // Git Bashを呼び出してコマンド実行
+        // Git Bashを呼び出してコマンド実行(generate-graphs.sh, review-pr.sh)
         bat """
-        "${GIT_BASH_PATH}" -c "cd ${WORK_DIR} && \\\\
-        ./understand/generate-graphs.sh > review-comment.txt && \\\\
-        ./understand/review-pr.sh review-comment.txt
-        "
+        "${GIT_BASH_PATH}" -c "cd ${WORK_DIR} && ./understand/generate-graphs.sh > review-comment.txt && ./understand/review-pr.sh review-comment.txt"
        """
       }
     }
