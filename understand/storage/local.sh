@@ -45,14 +45,13 @@ generate_pr_review_comment() {
   local unique_name="$5"
   local image_file_name="$6"
 
-  cat <<-END
+cat <<-END
 
   ### ${function_name} (${image_file_name})
-
   ![](${LOCAL_BASE_DIR}/${repository_owner}/${repository_name}/${commit}/images/${unique_name}.svg)
 
   -----
-  END
+END
 }
 
 # 4. 画像ファイルを保存
