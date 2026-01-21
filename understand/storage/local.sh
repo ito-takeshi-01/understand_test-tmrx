@@ -11,7 +11,7 @@ LOCAL_BASE_DIR="/c/work/understand_data/test_prj"
 repository_owner=${GIT_REPO_OWNER}
 repository_name=${GIT_REPO_NAME}
 commit=${PREV_COMMIT}
-und_db_archive=${PREV_UND_DB_ARCHIVE}
+#und_db_archive=${PREV_UND_DB_ARCHIVE}
 
 # 保存先のディレクトリを作成
 TARGET_DIR="${LOCAL_BASE_DIR}/${repository_owner}/${repository_name}/${commit}"
