@@ -36,8 +36,8 @@ pipeline {
       steps {
         // Windows PowerShellを使用
         powershell '''
-        env:PATH
-        ./understand/analyze.sh --upload
+        Write-Output $Env:PATH
+        bash ./understand/analyze.sh --upload
         '''
       }
     }
@@ -48,8 +48,8 @@ pipeline {
       }
       steps {
         powershell '''
-        ./understand/generate-graphs.sh > review-comment.txt
-        ./understand/review-pr.sh review-comment.txt
+        bash ./understand/generate-graphs.sh > review-comment.txt
+        bash ./understand/review-pr.sh review-comment.txt
         '''
       }
     }
