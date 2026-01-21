@@ -1,8 +1,8 @@
 #!/bin/sh -eux
 
 # 外部スクリプトの読み込み
-. "${0%/*}/variables"
 . "${0%/*}/gitservice/${GITSERVICE}.sh"
+. "${0%/*}/variables"
 . "${0%/*}/storage/${STORAGESERVICE}.sh"
 #. "${0%/*}/variables"
 
