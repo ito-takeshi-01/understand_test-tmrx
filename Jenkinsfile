@@ -41,8 +41,9 @@ pipeline {
         // Git Bashを呼び出してコマンド実行
         bat """
         "${GIT_BASH_PATH}" -c "
-        cd ${WORK_DIR}
-        ./understand/analyze.sh --upload
+        cd ${WORK_DIR} && \\\\
+        ./understand/generate-graphs.sh > review-comment.txt && \\\\
+        ./understand/review-pr.sh review-comment.txt
         "
         """
       }
@@ -56,16 +57,15 @@ pipeline {
         // Git Bashを呼び出してコマンド実行
         bat """
         "${GIT_BASH_PATH}" -c "
-        cd ${WORK_DIR}
-        ./understand/generate-graphs.sh > review-comment.txt
+        cd ${WORK_DIR} && \\\\
+        ./understand/generate-graphs.sh > review-comment.txt && \\\\
         ./understand/review-pr.sh review-comment.txt
         "
-        """./understand/review-pr.sh review-comment.txt
-        '''
+        """
       }
     }
   }
-  
+
   post {
     cleanup {
       powershell './understand/clean.sh'
