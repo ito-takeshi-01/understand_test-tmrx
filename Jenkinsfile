@@ -91,6 +91,10 @@ pipeline {
           echo "Master branch process starting..."
           // analyze.sh を --upload オプション付きで実行し、解析結果をベースラインとして保存
           bat """
+          @echo off
+          echo --- Current PATH in Baseline Stage ---
+          echo %PATH%
+          @echo on
           "${GIT_BASH_PATH}" -c "./understand/analyze.sh --upload"
           """
         }
@@ -146,6 +150,10 @@ pipeline {
         // 最後のビルドで作成された一時ファイルをクリーンアップする
         echo "Cleaning up workspace..."
         bat """
+        @echo off
+        echo --- Current PATH in Cleanup Stage ---
+        echo %PATH%
+        @echo on
         "${GIT_BASH_PATH}" -c "./understand/clean.sh"
         """
       }
