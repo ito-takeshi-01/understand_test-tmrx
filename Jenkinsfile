@@ -2,8 +2,24 @@ pipeline {
   agent any
 
   // 手動実行時に条件を制御できるようにする
+  
+  // 15分ごとにGitリポジトリの変更をチェックするポーリング設定
+  triggers {
+    pollSCM('H/15 * * * *')
+  }
+
   parameters {
-    booleanParam(name: 'RUN_ALWAYS', defaultValue: false, description: '常にこのパイプラインを実行する')
+    // booleanParam(name: 'RUN_ALWAYS', defaultValue: false, description: '常にこのパイプラインを実行する')
+    choice(
+        name: 'BUILD_TYPE',
+        choices: ['NONE', 'MASTER', 'FEATURE'],
+        description: '手動で実行するビルドの種類を選択します。NONEの場合はSCMポーリングでのみ動作します。'
+    )
+    string(
+        name: 'FEATURE_BRANCH_NAME',
+        defaultValue: 'develop', // デフォルトのテスト用ブランチ名
+        description: 'BUILD_TYPEでFEATUREを選択した場合に、対象となるブランチ名を入力します。'
+    )
   }
 
   environment {
@@ -16,51 +32,125 @@ pipeline {
     
     // Git Bashのパスと作業ディレクトリ
     GIT_BASH_PATH = "C:\\Program Files\\Git\\bin\\bash.exe"                // ※個別に設定が必要
-    WORK_DIR = "/c/jenkins/workspace/workspace/understand/test_pipeline2"  // 実際のパスに置き換えが必要
+    //WORK_DIR = "/c/jenkins/workspace/workspace/understand/test_pipeline2"  // 実際のパスに置き換えが必要
   }
 
   // 過去n回のビルドログを保持し、古いログを自動的に削除
   options {
-    buildDiscarder logRotator(numToKeepStr: '5')
+    buildDiscarder logRotator(numToKeepStr: '3')
   }
 
   stages {
-    stage('Analysis') {
-      //メインブランチにプッシュされたまたはメインブランチへマージするプルリクストが発行された場合に実行する
+    // === Stage 0: 手動実行時のセットアップ ===
+    stage('Manual Build Setup') {
       when {
-        anyOf { 
-          branch 'master'                  // GitHubのブランチがmasterの場合
-          changeRequest target: 'master'   // PRのターゲットがmasterの場合
-          expression { params.RUN_ALWAYS } // 手動実行時に常に実行
+        // BUILD_TYPE が NONE ではない (手動実行が選択された) 場合にのみ実行
+        expression { params.BUILD_TYPE != 'NONE' }
+      }
+      steps {
+        script {
+          def branchToCheckout = ''
+          if (params.BUILD_TYPE == 'MASTER') {
+            branchToCheckout = 'master'
+          } else if (params.BUILD_TYPE == 'FEATURE') {
+            branchToCheckout = params.FEATURE_BRANCH_NAME
+          }
+          echo "Manual build triggered for branch: ${branchToCheckout}"
+
+          // 手動実行の場合、Declarative Checkoutはスキップされるため、指定されたブランチを明示的にチェックアウトする
+          checkout([
+            $class: 'GitSCM',
+            branches: [[name: "*/${branchToCheckout}"]],
+            userRemoteConfigs: [[
+              url: env.GITHUB_URL,
+              // このパイプラインジョブでGitリポジトリにアクセスするための資格情報ID
+              // (例) GitHub-Understand5。必要に応じて変更してください。
+              credentialsId: 'GitHub-Understand5' 
+            ]]
+          ])
+          
+          // 後続のステージで参照できるよう、env.BRANCH_NAME を手動で設定する
+          env.BRANCH_NAME = branchToCheckout
+        }
+      }
+    }
+
+    // === Stage 1: masterブランチでの処理 (ベースライン解析と保存) ===
+    stage('Baseline Analysis (master branch)') {
+      when {
+        // 条件: [通常のポーリングでmasterブランチを検出] または [手動でMASTERが選択された]
+        anyOf {
+          // ポーリング時はJenkinsが自動でチェックアウトし、env.BRANCH_NAMEを設定する
+          expression { env.BRANCH_NAME == 'master' && params.BUILD_TYPE == 'NONE' } 
+          // 手動実行時はパラメータで判断
+          expression { params.BUILD_TYPE == 'MASTER' }
         }
       }
       steps {
-        // Git Bashを呼び出してコマンド実行(generate-graphs.sh, review-pr.sh)
-        bat """
-        "${GIT_BASH_PATH}" -c "cd ${WORK_DIR} && ./understand/generate-graphs.sh > review-comment.txt && ./understand/review-pr.sh review-comment.txt"
-        """
+        script {
+          echo "Master branch process starting..."
+          // analyze.sh を --upload オプション付きで実行し、解析結果をベースラインとして保存
+          bat """
+          "${GIT_BASH_PATH}" -c "./understand/analyze.sh --upload"
+          """
+        }
       }
     }
-    stage('Pull Request Review') {
+
+    // === Stage 2: PR/featureブランチでの処理 (比較解析とレポート) ===
+    stage('Comparison Analysis (feature branch)') {
       when {
-        changeRequest target: 'master'   // PRのターゲットがmasterの場合
-        expression { params.RUN_ALWAYS } // 手動実行時に常に実行
+        // 条件: [通常のポーリングでmaster以外のブランチを検出] または [手動でFEATUREが選択された]
+        anyOf {
+          // ポーリング時
+          expression { env.BRANCH_NAME != null && env.BRANCH_NAME != 'master' && params.BUILD_TYPE == 'NONE' }
+          // 手動実行時
+          expression { params.BUILD_TYPE == 'FEATURE' }
+        }
       }
       steps {
-        // Git Bashを呼び出してコマンド実行(generate-graphs.sh, review-pr.sh)
-        bat """
-        "${GIT_BASH_PATH}" -c "cd ${WORK_DIR} && ./understand/generate-graphs.sh > review-comment.txt && ./understand/review-pr.sh review-comment.txt"
-       """
+        script {
+          echo "Feature branch process starting for branch: ${env.BRANCH_NAME}..."
+          // GitHub APIを使用するため、withCredentialsで資格情報を安全に渡す
+          withCredentials([string(credentialsId: 'GITHUB_CRED', variable: 'GITHUB_TOKEN_FROM_JENKINS')]) {
+            bat(script: """
+              @echo off
+              
+              REM 後続のbashスクリプトで使えるように環境変数をセット
+              set GITHUB_TOKEN=%GITHUB_TOKEN_FROM_JENKINS%
+              set BRANCH_NAME=${env.BRANCH_NAME}
+              
+              echo "--- 1. Analyzing current branch ---"
+              REM 増分解析のため、現在のブランチのDBを作成 (アップロードはしない)
+              "${GIT_BASH_PATH}" -c "./understand/analyze.sh"
+              
+              echo "--- 2. Generating graphical report for PR ---"
+              REM 解析DBを比較し、差分レポート(review-comment.txt)を作成
+              REM このスクリプト内でGitHub APIを叩き、PR情報を取得する
+              "${GIT_BASH_PATH}" -c "./understand/generate-graphs.sh > review-comment.txt"
+              
+              echo "--- 3. Posting review comment to PR ---"
+              REM 作成したレポートをGitHubのPRにコメントとして投稿
+              "${GIT_BASH_PATH}" -c "./understand/review-pr.sh review-comment.txt"
+            """)
+          }
+        }
       }
     }
   }
+
 
   post {
     cleanup {
       script {
-        powershell './understand/clean.sh'
+        // 最後のビルドで作成された一時ファイルをクリーンアップする
+        echo "Cleaning up workspace..."
+        bat """
+        "${GIT_BASH_PATH}" -c "./understand/clean.sh"
+        """
       }
     }
   }
+
 }
 
