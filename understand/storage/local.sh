@@ -59,9 +59,6 @@ generate_pr_review_comment() {
     local unique_name="$5"
     local file_name="$6"
 
-    # 注意：このパスはローカルPC上のものであり、GitHub上では画像は表示されません。
-    # これは「ローカルで完結させる」という現在の仕様上、やむを得ない制約です。
-    # 将来的に画像をWebサーバー等に置く場合は、ここのパスをそのURLに変更します。
     cat <<-END
 
         ### ${function_name} (${file_name})
@@ -69,7 +66,7 @@ generate_pr_review_comment() {
         (Image cannot be displayed from local path: ${LOCAL_BASE_DIR}/${repository_owner}/${repository_name}/${commit}/images/${unique_name}.svg)
 
         -----
-    END
+END
 }
 
 # 4. 生成された画像をローカルに保存する関数
