@@ -8,7 +8,7 @@ pipeline {
 
   environment {
     GITSERVICE = 'github2'
-    GITHUB_CRED = credentials('GITHUB_CRED')                               // JenkinsのCredential設定より、GitHubの資格情報IDを取得する
+    //GITHUB_CRED = credentials('GITHUB_CRED')                               // JenkinsのCredential設定より、GitHubの資格情報IDを取得する
                                                                            //  (※予めJenkinsの設定＞Crdentialで設定が必要、またCredentialのIDの名称を同じ(例 GITHUB_CRED)にする必要あり)
     GITHUB_URL  = "https://github.com/ito-takeshi-01/understand_test"      // GitHubリポジトリ設定 　 ※個別に設定が必要
     STORAGESERVICE = 'local'                                               // ストレージサービスの設定
@@ -57,7 +57,9 @@ pipeline {
 
   post {
     cleanup {
-      powershell './understand/clean.sh'
+      script {
+        powershell './understand/clean.sh'
+      }
     }
   }
 }
