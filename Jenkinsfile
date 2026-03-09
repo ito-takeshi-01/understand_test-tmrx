@@ -1,9 +1,5 @@
 pipeline {
-  agent {
-    // Windows用のエージェントラベルに変更
-    //label 'windows && understand'
-    any
-  }
+  agent any
 
   // 手動実行時に条件を制御できるようにする
   parameters {
