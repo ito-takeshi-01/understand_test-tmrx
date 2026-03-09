@@ -23,6 +23,7 @@ pipeline {
   }
 
   environment {
+    PATH = "C:\\Program Files\\SciTools\\bin\\pc-win64;${env.PATH}"
     GITSERVICE = 'github2'
     //GITHUB_CRED = credentials('GITHUB_CRED')                               // JenkinsのCredential設定より、GitHubの資格情報IDを取得する
                                                                            //  (※予めJenkinsの設定＞Crdentialで設定が必要、またCredentialのIDの名称を同じ(例 GITHUB_CRED)にする必要あり)
