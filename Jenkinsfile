@@ -35,6 +35,10 @@ pipeline {
     GIT_BASH_PATH = "C:\\Program Files\\Git\\bin\\bash.exe"                // ※個別に設定が必要
     //WORK_DIR = "/c/jenkins/workspace/workspace/understand/test_pipeline2"  // 実際のパスに置き換えが必要
     
+    //set networking proxy
+    http_proxy=http://proxy.mei.co.jp:8080/
+    https_proxy=http://proxy.mei.co.jp:8080/
+    
     // プロキシサーバーの情報を環境変数として定義
     PROXY_HOST = "proxy.mei.co.jp"
     PROXY_PORT = "8080"
