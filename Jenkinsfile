@@ -136,9 +136,6 @@ pipeline {
           echo %PATH%
           @echo on
           
-           REM bashスクリプト内で `und` というエイリアスが使えるようにexportする
-          set "und=%UND_CMD%" 
-          
           "${GIT_BASH_PATH}" -c "./understand/analyze.sh --upload"
           """
         }
@@ -167,9 +164,6 @@ pipeline {
               REM 後続のbashスクリプトで使えるように環境変数をセット
               set GITHUB_TOKEN=%GITHUB_TOKEN_FROM_JENKINS%
               set BRANCH_NAME=${env.BRANCH_NAME}
-              
-              REM bashスクリプト内で `und` というエイリアスが使えるようにexportする
-              set "und=%UND_CMD%"             
               
               echo "--- 1. Analyzing current branch ---"
               REM 増分解析のため、現在のブランチのDBを作成 (アップロードはしない)
@@ -201,9 +195,6 @@ pipeline {
         echo --- Current PATH in Cleanup Stage ---
         echo %PATH%
         @echo on
-        
-        REM bashスクリプト内で `und` というエイリアスが使えるようにexportする
-        set "und=%UND_CMD%"
         
         "${GIT_BASH_PATH}" -c "./understand/clean.sh"
         """
