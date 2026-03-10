@@ -51,6 +51,32 @@ pipeline {
   }
 
   stages {
+    stage('Configure Understand Proxy') {
+      steps {
+        script {
+          echo "Configuring Understand global settings for proxy..."
+          bat """
+            @echo off
+            REM Understandのグローバル設定ファイルのパスを取得 (通常は %APPDATA%\\SciTools\\conf\\Understand\\global.ini)
+            set GLOBAL_INI=%APPDATA%\\SciTools\\conf\\Understand\\global.ini
+
+            REM 設定ファイル用のディレクトリが存在しない場合に作成
+            if not exist "%APPDATA%\\SciTools\\conf\\Understand" mkdir "%APPDATA%\\SciTools\\conf\\Understand"
+
+            REM グローバル設定ファイルにプロキシ設定を書き込む
+            echo [Proxy] > "%GLOBAL_INI%"
+            echo Host=${PROXY_HOST} >> "%GLOBAL_INI%"
+            echo Port=${PROXY_PORT} >> "%GLOBAL_INI%"
+            echo Credentials= >> "%GLOBAL_INI%"
+
+            echo --- Global.ini content ---
+            type "%GLOBAL_INI%"
+            @echo on
+          """
+        }
+      }
+    }
+  
     // === Stage 0: 手動実行時のセットアップ ===
     stage('Manual Build Setup') {
       when {
