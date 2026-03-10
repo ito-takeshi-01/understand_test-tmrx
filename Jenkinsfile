@@ -34,6 +34,15 @@ pipeline {
     // Git Bashのパスと作業ディレクトリ
     GIT_BASH_PATH = "C:\\Program Files\\Git\\bin\\bash.exe"                // ※個別に設定が必要
     //WORK_DIR = "/c/jenkins/workspace/workspace/understand/test_pipeline2"  // 実際のパスに置き換えが必要
+    
+    // プロキシサーバーの情報を環境変数として定義
+    PROXY_HOST = "proxy.mei.co.jp"
+    PROXY_PORT = "8080"
+    
+    // プロキシ設定を含んだ `und` コマンドのエイリアスを定義
+    // bash スクリプト内で `und` と呼び出すと、これが実行される
+    // -proxycreds "" を追加して不要な認証ダイアログを抑制する
+    UND_CMD = "und -proxyhost ${PROXY_HOST} -proxyport ${PROXY_PORT} -proxycreds \"\"" 
   }
 
   // 過去n回のビルドログを保持し、古いログを自動的に削除
@@ -96,6 +105,10 @@ pipeline {
           echo --- Current PATH in Baseline Stage ---
           echo %PATH%
           @echo on
+          
+           REM bashスクリプト内で `und` というエイリアスが使えるようにexportする
+          set "und=%UND_CMD%" 
+          
           "${GIT_BASH_PATH}" -c "./understand/analyze.sh --upload"
           """
         }
@@ -124,6 +137,9 @@ pipeline {
               REM 後続のbashスクリプトで使えるように環境変数をセット
               set GITHUB_TOKEN=%GITHUB_TOKEN_FROM_JENKINS%
               set BRANCH_NAME=${env.BRANCH_NAME}
+              
+              REM bashスクリプト内で `und` というエイリアスが使えるようにexportする
+              set "und=%UND_CMD%"             
               
               echo "--- 1. Analyzing current branch ---"
               REM 増分解析のため、現在のブランチのDBを作成 (アップロードはしない)
@@ -155,6 +171,10 @@ pipeline {
         echo --- Current PATH in Cleanup Stage ---
         echo %PATH%
         @echo on
+        
+        REM bashスクリプト内で `und` というエイリアスが使えるようにexportする
+        set "und=%UND_CMD%"
+        
         "${GIT_BASH_PATH}" -c "./understand/clean.sh"
         """
       }
