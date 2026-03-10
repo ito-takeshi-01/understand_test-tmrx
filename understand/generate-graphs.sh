@@ -1,14 +1,6 @@
 #!/bin/sh -eux
 # 変更された関数のグラフをPRにフィードバック
 
-# プロキシ設定用の環境変数（PROXY_HOST, PROXY_PORT）がJenkinsfileから渡されているか確認し、
-# 存在すればundコマンドをプロキシ設定付きのエイリアス（別名）で上書きする。
-if [ -n "${PROXY_HOST:-}" ] && [ -n "${PROXY_PORT:-}" ]; then
-    alias und="und -proxyhost ${PROXY_HOST} -proxyport ${PROXY_PORT} -proxycreds ''"
-    # uperlも同じプロキシ設定が必要な場合があるため、同様に設定する
-    alias uperl="uperl -proxyhost ${PROXY_HOST} -proxyport ${PROXY_PORT} -proxycreds ''"
-fi
-
 . "${0%/*}/gitservice/${GITSERVICE}.sh"
 . "${0%/*}/storage/${STORAGESERVICE}.sh"
 . "${0%/*}/variables"
