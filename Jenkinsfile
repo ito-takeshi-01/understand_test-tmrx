@@ -36,8 +36,8 @@ pipeline {
     //WORK_DIR = "/c/jenkins/workspace/workspace/understand/test_pipeline2"  // 実際のパスに置き換えが必要
     
     //set networking proxy
-    http_proxy=http://proxy.mei.co.jp:8080/
-    https_proxy=http://proxy.mei.co.jp:8080/
+    http_proxy ='http://proxy.mei.co.jp:8080/'
+    https_proxy='http://proxy.mei.co.jp:8080/'
     
     // プロキシサーバーの情報を環境変数として定義
     PROXY_HOST = "proxy.mei.co.jp"
