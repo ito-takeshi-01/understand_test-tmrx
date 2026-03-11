@@ -136,9 +136,6 @@ pipeline {
           echo %PATH%
           @echo on
           
-          bat """
-          @echo on
-          
           echo ==== und license (from Jenkins) ====
           where und
           und license
