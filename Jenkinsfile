@@ -116,31 +116,38 @@ pipeline {
     }
 
     // === Stage 1: masterブランチでの処理 (ベースライン解析と保存) ===
-    stage('Baseline Analysis (master branch)') {
-      when {
-        // 条件: [通常のポーリングでmasterブランチを検出] または [手動でMASTERが選択された]
-        anyOf {
-          // ポーリング時はJenkinsが自動でチェックアウトし、env.BRANCH_NAMEを設定する
-          expression { env.BRANCH_NAME == 'master' && params.BUILD_TYPE == 'NONE' } 
-          // 手動実行時はパラメータで判断
-          expression { params.BUILD_TYPE == 'MASTER' }
-        }
-      }
-      steps {
-        script {
-          echo "Master branch process starting..."
-          // analyze.sh を --upload オプション付きで実行し、解析結果をベースラインとして保存
-          bat """
-          @echo off
-          echo --- Current PATH in Baseline Stage ---
-          echo %PATH%
-          @echo on
-          
-          "${GIT_BASH_PATH}" -c "./understand/analyze.sh --upload"
-          """
-        }
-      }
+stage('Baseline Analysis (master branch)') {
+  when {
+    anyOf {
+      expression { env.BRANCH_NAME == 'master' && params.BUILD_TYPE == 'NONE' } 
+      expression { params.BUILD_TYPE == 'MASTER' }
     }
+  }
+  steps {
+    script {
+      echo "Master branch process starting..."
+      bat """
+      @echo off
+      echo ===== DEBUG (Windows user/session) =====
+      whoami
+      echo USERNAME=%USERNAME%
+      echo USERPROFILE=%USERPROFILE%
+      echo APPDATA=%APPDATA%
+      echo LOCALAPPDATA=%LOCALAPPDATA%
+      echo TEMP=%TEMP%
+      echo ===== Environment snippet =====
+      set | findstr /I "JENKINS USERNAME USERPROFILE APPDATA LOCALAPPDATA TEMP GIT HTTP HTTPS PROXY PATH"
+      echo ========================================
+
+      echo --- Current PATH in Baseline Stage ---
+      echo %PATH%
+      @echo on
+
+      "${GIT_BASH_PATH}" -lc "./understand/analyze.sh --upload"
+      """
+    }
+  }
+}
 
     // === Stage 2: PR/featureブランチでの処理 (比較解析とレポート) ===
     stage('Comparison Analysis (feature branch)') {
