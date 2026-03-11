@@ -136,11 +136,15 @@ pipeline {
           echo %PATH%
           @echo on
           
-          echo ==== und license (from Jenkins) ====
-          und license
-          echo ==== und help (from Jenkins) ====
-          und help
-          echo ==================================
+          bat """
+          @echo on
+          
+echo ==== und license (from Jenkins) ====
+where und
+und license
+echo ==== und help (from Jenkins) ====
+und help
+echo ==================================
           
           "${GIT_BASH_PATH}" -c "./understand/analyze.sh --upload"
           """
