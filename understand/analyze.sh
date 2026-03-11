@@ -25,8 +25,7 @@ else
 fi
 
 # 解析を実行
-#und analyze "${UND_DB_DIR}"                 # 指定したデータベースに対して静的解析を実行
-und analyze -db "${UND_DB_DIR}"                 # 指定したデータベースに対して静的解析を実行
+und analyze "${UND_DB_DIR}"                 # 指定したデータベースに対して静的解析を実行
 tar czf "${UND_DB_ARCHIVE}" "${UND_DB_DIR}" # 解析後のデータベースディレクトリを圧縮し、アーカイブファイル${UND_DB_ARCHIVE}に保存
 
 # 解析データをアップロード
