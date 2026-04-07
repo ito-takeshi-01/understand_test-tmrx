@@ -1,6 +1,7 @@
 #!/bin/sh -x
 
-UND_DB_DIR="cgit-${GIT_COMMIT:=$(git show --summary --format=%H)}.und"
+. "${0%/*}/variables"
 
-und purge "${UND_DB_DIR}"
-rm -rf cgit-*.und cgit-*.und.tar.gz
+# und purge が失敗しても cleanup 自体は続行
+und purge "${UND_DB_DIR}" || true
+rm -rf "${UND_DB_DIR}" "${UND_DB_ARCHIVE}"

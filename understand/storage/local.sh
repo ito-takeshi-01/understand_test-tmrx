@@ -2,7 +2,7 @@
 # シェルスクリプトのお作法として、どのシェルで動くかを明記
 
 # ローカル保存先のルートディレクトリを定義
-LOCAL_BASE_DIR="/c/work/understand_data/test_prj"
+LOCAL_BASE_DIR="${LOCAL_STORAGE_PATH:-/c/work/understand_data/test_prj}"
 
 # 1. 前回の解析データをローカルから取得する関数
 get_analysis_data() {
