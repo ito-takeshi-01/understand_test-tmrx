@@ -39,13 +39,6 @@ pipeline {
   }
 
   stages {
-    stage('Checkout (controller)') {
-      agent { label 'Jenkins' }   // controllerノードのラベルに合わせてください
-      steps {
-        checkout scm
-      }
-    }
-
     stage('Checkout (understand-agent)') {
       agent { label 'understand-agent' }
       steps {
