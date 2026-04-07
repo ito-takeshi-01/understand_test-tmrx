@@ -1,12 +1,6 @@
 pipeline {
   agent none
 
-  options {
-    buildDiscarder(logRotator(numToKeepStr: '3'))
-    timestamps()
-    skipDefaultCheckout(true)
-  }
-
   parameters {
     choice(
       name: 'BUILD_TYPE',
