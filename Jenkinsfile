@@ -17,6 +17,8 @@ pipeline {
 
   environment {
     UND_BIN_DIR     = 'C:\\Program Files\\SciTools\\bin\\pc-win64'
+    GIT_BIN_DIR     = 'C:\\Program Files\\Git\\bin'
+    GIT_CMD_DIR     = 'C:\\Program Files\\Git\\cmd'
     GIT_BASH_PATH   = 'C:\\Program Files\\Git\\bin\\bash.exe'
     GITHUB_URL      = 'https://github.com/ito-takeshi-01/understand_test.git'
     GITSERVICE      = 'github2'
@@ -53,17 +55,18 @@ pipeline {
       }
     }
 
-    stage('Debug: Who am I (understand-agent)') {
+    stage('Debug: Environment Check') {
       agent { label 'understand-agent' }
       steps {
         bat """
           @echo off
           setlocal
-          whoami
+          set PATH=${GIT_BIN_DIR};${GIT_CMD_DIR};${UND_BIN_DIR};%PATH%
           echo USERNAME=%USERNAME%
           echo USERPROFILE=%USERPROFILE%
-          set PATH=${UND_BIN_DIR};%PATH%
-          where und
+          echo --- Checking git ---
+          git --version
+          echo --- Checking und ---
           und license
         """
       }
@@ -101,8 +104,13 @@ pipeline {
             ])
           }
           
-          // Git情報を取得
-          def gitCommit = bat(script: '@git rev-parse HEAD', returnStdout: true).trim().readLines().last()
+          // Git情報を取得（PATHにGitを含める）
+          def gitCommit = bat(script: """
+            @echo off
+            set PATH=${GIT_BIN_DIR};${GIT_CMD_DIR};%PATH%
+            git rev-parse HEAD
+          """, returnStdout: true).trim().readLines().last()
+          
           def gitUrl = env.GITHUB_URL
           def branchName = env.TARGET_BRANCH ?: env.BRANCH_NAME ?: 'master'
           
@@ -119,7 +127,7 @@ pipeline {
         bat """
           @echo off
           setlocal EnableDelayedExpansion
-          set PATH=${UND_BIN_DIR};%PATH%
+          set PATH=${GIT_BIN_DIR};${GIT_CMD_DIR};${UND_BIN_DIR};%PATH%
 
           REM ローカルストレージパスをBash形式に変換
           set "WINP=${params.LOCAL_STORAGE_PATH}"
@@ -165,8 +173,13 @@ pipeline {
             env.TARGET_BRANCH = env.BRANCH_NAME
           }
           
-          // Git情報を取得
-          def gitCommit = bat(script: '@git rev-parse HEAD', returnStdout: true).trim().readLines().last()
+          // Git情報を取得（PATHにGitを含める）
+          def gitCommit = bat(script: """
+            @echo off
+            set PATH=${GIT_BIN_DIR};${GIT_CMD_DIR};%PATH%
+            git rev-parse HEAD
+          """, returnStdout: true).trim().readLines().last()
+          
           def gitUrl = env.GITHUB_URL
           def branchName = env.TARGET_BRANCH
           
@@ -184,7 +197,7 @@ pipeline {
           bat """
             @echo off
             setlocal EnableDelayedExpansion
-            set PATH=${UND_BIN_DIR};%PATH%
+            set PATH=${GIT_BIN_DIR};${GIT_CMD_DIR};${UND_BIN_DIR};%PATH%
             set GITHUB_TOKEN=%GITHUB_TOKEN_FROM_JENKINS%
 
             REM ローカルストレージパスをBash形式に変換
@@ -225,15 +238,18 @@ pipeline {
     always {
       node('understand-agent') {
         script {
-          // Git情報を取得（クリーンアップ用）
+          // Git情報を取得（クリーンアップ用、PATHにGitを含める）
           def gitCommit = ''
-          def branchName = ''
           try {
-            gitCommit = bat(script: '@git rev-parse HEAD 2>nul', returnStdout: true).trim().readLines().last()
+            gitCommit = bat(script: """
+              @echo off
+              set PATH=${GIT_BIN_DIR};${GIT_CMD_DIR};%PATH%
+              git rev-parse HEAD
+            """, returnStdout: true).trim().readLines().last()
           } catch (Exception e) {
-            gitCommit = 'unknown'
+            gitCommit = env.GIT_COMMIT_HASH ?: 'unknown'
           }
-          branchName = env.CURRENT_BRANCH ?: env.TARGET_BRANCH ?: env.BRANCH_NAME ?: 'master'
+          def branchName = env.CURRENT_BRANCH ?: env.TARGET_BRANCH ?: env.BRANCH_NAME ?: 'master'
           
           env.GIT_COMMIT_HASH = gitCommit
           env.CURRENT_BRANCH = branchName
@@ -242,7 +258,7 @@ pipeline {
         bat """
           @echo off
           setlocal EnableDelayedExpansion
-          set PATH=${UND_BIN_DIR};%PATH%
+          set PATH=${GIT_BIN_DIR};${GIT_CMD_DIR};${UND_BIN_DIR};%PATH%
 
           REM ローカルストレージパスをBash形式に変換
           set "WINP=${params.LOCAL_STORAGE_PATH}"
@@ -260,7 +276,7 @@ pipeline {
           echo BRANCH_NAME=!BRANCH_NAME!
           echo ---
           
-          "${GIT_BASH_PATH}" -lc "export GIT_COMMIT='!GIT_COMMIT!' && export BRANCH_NAME='!BRANCH_NAME!' && export LOCAL_STORAGE_PATH='!LOCAL_STORAGE_PATH!' && ./understand/clean.sh"
+          "${GIT_BASH_PATH}" -lc "export GIT_COMMIT='!GIT_COMMIT!' && export BRANCH_NAME='!BRANCH_NAME!' && export LOCAL_STORAGE_PATH='!LOCAL_STORAGE_PATH!' && ./understand/clean.sh || true"
         """
       }
     }
