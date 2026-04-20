@@ -55,23 +55,6 @@ pipeline {
       }
     }
 
-    stage('Debug: Environment Check') {
-      agent { label 'understand-agent' }
-      steps {
-        bat """
-          @echo off
-          setlocal
-          set PATH=${GIT_BIN_DIR};${GIT_CMD_DIR};${UND_BIN_DIR};%PATH%
-          echo USERNAME=%USERNAME%
-          echo USERPROFILE=%USERPROFILE%
-          echo --- Checking git ---
-          git --version
-          echo --- Checking und ---
-          und license
-        """
-      }
-    }
-
     stage('Manual Build Setup') {
       agent { label 'understand-agent' }
       when { expression { params.BUILD_TYPE != 'NONE' } }
