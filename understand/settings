@@ -1,4 +1,4 @@
 # und settings の引数に使用するパラメータを列挙します。
 # 1 行につき 1 つの設定オプションを記載します。
-#-Languages C++
--Languages C++(Fuzzy)
+-Languages C++
+
