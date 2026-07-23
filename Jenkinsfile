@@ -1,13 +1,11 @@
-pipeline {
-  agent any  // ← "agent { label 'Understand' }" から変更
+ipeline {
+  agent any
 
   environment {
     GITSERVICE = 'github-jenkins'
-    GITHUB_CRED = credentials('GitHub Tomoyoshi')
-    // Github の URL を指定する
-    GITHUB_URL  = "https://github.com/tmx-tomoyoshi/fastgrep"
+    GITHUB_CRED = credentials('github-Understand-texhmatrix')
+    GITHUB_URL  = "https://github.com/ito-takeshi-01/understand_test-tmrx"
     
-    // TBE:使用するストレージのアクセス情報を指定する
     STORAGESERVICE = 'aws-s3'
     AWS_S3_BUCKET_NAME = 'ltxund-jenkins-storage'
     AWS_REGION = 'ap-northeast-1'
@@ -16,9 +14,11 @@ pipeline {
     // NEXUS_URL = "http://172.20.128.8"
     // NEXUS_CREDENTIALS_FILE = credentials('NEXUS_CREDENTIALS_FILE')
   }
+  
   options {
     buildDiscarder logRotator(numToKeepStr: '10')
   }
+  
   stages {
     stage('解析') {
       when {
@@ -28,31 +28,37 @@ pipeline {
           }
       }
       steps {
-        sh '''
-          env
-          chmod 755 ./understand/analyze.sh
-          ./understand/analyze.sh --upload
+        bat '''
+          set
+          cd understand
+          bash analyze.sh --upload
         '''
       }
     }
+    
     stage('PRレビュー') {
       when {
         changeRequest target: 'main'
       }
       steps {
-        sh '''
-          chmod 755 ./understand/generate-graphs.sh
-          chmod 755 ./understand/review-pr.sh
-          ./understand/generate-graphs.sh > review-comment.txt
-          ./understand/review-pr.sh review-comment.txt
+        bat '''
+          cd understand
+          bash generate-graphs.sh > review-comment.txt
+          bash review-pr.sh review-comment.txt
         '''
       }
     }
   }
+  
   post {
-    cleanup {
-      sh 'chmod 755 ./understand/clean.sh'
-      sh './understand/clean.sh'
+    always {
+      script {
+        try {
+          bat 'cd understand && bash clean.sh'
+        } catch (Exception e) {
+          echo "Cleanup failed: ${e.message}"
+        }
+      }
     }
   }
 }
