@@ -4,7 +4,7 @@ pipeline {
   environment {
     GITSERVICE = 'github-jenkins'
     GITHUB_CRED = credentials('github-Understand-texhmatrix')
-    GITHUB_URL  = "https://github.com/ito-takeshi-01/understand_test-tmrx
+    GITHUB_URL  = "https://github.com/ito-takeshi-01/understand_test-tmrx"
 
     UND_BIN_DIR     = 'C:\\Program Files\\SciTools\\bin\\pc-win64'
     GIT_BIN_DIR     = 'C:\\Program Files\\Git\\bin'
