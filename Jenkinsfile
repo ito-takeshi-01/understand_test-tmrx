@@ -1,5 +1,5 @@
 pipeline {
-  agent agent any  // ← "agent { label 'Understand' }" から変更
+  agent any  // ← "agent { label 'Understand' }" から変更
 
   environment {
     GITSERVICE = 'github-jenkins'
