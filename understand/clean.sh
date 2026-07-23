@@ -1,7 +1,11 @@
-#!/bin/sh -x
+#!/bin/sh -eux
 
-. "${0%/*}/variables"
+# スクリプトのディレクトリを取得
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# und purge が失敗しても cleanup 自体は続行
-und purge "${UND_DB_DIR}" || true
-rm -rf "${UND_DB_DIR}" "${UND_DB_ARCHIVE}"
+# 外部スクリプトの読み込み
+. "$SCRIPT_DIR/variables"
+
+# データベースをクリーンアップ
+und purge "$UND_DB_DIR"
+rm -rf "$UND_DB_DIR"
