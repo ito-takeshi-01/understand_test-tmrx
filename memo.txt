@@ -1,3 +1,0 @@
-
-htmls: https://github.com/ito-takeshi-01/understand_test-tmrx.git
-ssh  : git@github.com:ito-takeshi-01/understand_test-tmrx.git

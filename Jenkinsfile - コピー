@@ -1,6 +1,8 @@
 pipeline {
-  agent agent any  // ← "agent { label 'Understand' }" から変更
-
+  agent {
+    // TBE:Jenkins エージェントのラベルを指定する
+    label 'Understand'
+  }
   environment {
     GITSERVICE = 'github-jenkins'
     GITHUB_CRED = credentials('GitHub Tomoyoshi')
