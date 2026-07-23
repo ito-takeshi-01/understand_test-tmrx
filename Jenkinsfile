@@ -37,7 +37,7 @@ pipeline {
         bat '''
           set
           cd understand
-          bash analyze.sh --upload
+           "%GIT_BASH_PATH%" analyze.sh --upload
         '''
       }
     }
@@ -49,8 +49,8 @@ pipeline {
       steps {
         bat '''
           cd understand
-          bash generate-graphs.sh > review-comment.txt
-          bash review-pr.sh review-comment.txt
+           "%GIT_BASH_PATH%" generate-graphs.sh > review-comment.txt
+           "%GIT_BASH_PATH%" review-pr.sh review-comment.txt
         '''
       }
     }
@@ -59,7 +59,7 @@ pipeline {
       steps {
         script {
           try {
-            bat 'cd understand && bash clean.sh'
+            bat 'cd understand && "%GIT_BASH_PATH%" clean.sh'
           } catch (Exception e) {
             echo "Cleanup failed: ${e.message}"
           }
