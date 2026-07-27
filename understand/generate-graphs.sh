@@ -1,6 +1,31 @@
 #!/bin/sh -eux
 # 変更された関数のグラフをPRにフィードバック
 
+
+
+
+# デバッグ出力
+echo "DEBUG: \$0 = $0"
+echo "DEBUG: \${0%/*} = ${0%/*}"
+echo "DEBUG: GITSERVICE = ${GITSERVICE}"
+echo "DEBUG: STORAGESERVICE = ${STORAGESERVICE}"
+echo "DEBUG: PWD = $(pwd)"
+
+. "${0%/*}/gitservice/${GITSERVICE}.sh"
+. "${0%/*}/storage/${STORAGESERVICE}.sh"
+. "${0%/*}/variables"
+
+
+# スクリプトのディレクトリを取得
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+. "${SCRIPT_DIR}/gitservice/${GITSERVICE}.sh"
+. "${SCRIPT_DIR}/storage/${STORAGESERVICE}.sh"
+. "${SCRIPT_DIR}/variables"
+
+
+
+
 . "${0%/*}/gitservice/${GITSERVICE}.sh"
 . "${0%/*}/storage/${STORAGESERVICE}.sh"
 . "${0%/*}/variables"
