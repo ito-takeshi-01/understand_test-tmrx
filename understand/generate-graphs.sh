@@ -1,26 +1,38 @@
 #!/bin/sh -eux
 # 変更された関数のグラフをPRにフィードバック
 
-# デバッグ出力
-echo "DEBUG: \$0 = $0"
-echo "DEBUG: PWD = $(pwd)"
-echo "DEBUG: GITSERVICE = ${GITSERVICE}"
-echo "DEBUG: STORAGESERVICE = ${STORAGESERVICE}"
+# === デバッグ出力開始 ===
+echo "=== DEBUG START ===" 1>&2
+echo "DEBUG: \$0 = $0" 1>&2
+echo "DEBUG: PWD = $(pwd)" 1>&2
+echo "DEBUG: GITSERVICE = ${GITSERVICE}" 1>&2
+echo "DEBUG: STORAGESERVICE = ${STORAGESERVICE}" 1>&2
 
 # スクリプトのディレクトリを取得
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-echo "DEBUG: SCRIPT_DIR = ${SCRIPT_DIR}"
+echo "DEBUG: SCRIPT_DIR = ${SCRIPT_DIR}" 1>&2
 
 # ディレクトリ構造の確認
-echo "DEBUG: Listing ${SCRIPT_DIR}:"
-ls -la "${SCRIPT_DIR}/" || true
-echo "DEBUG: Listing ${SCRIPT_DIR}/gitservice/:"
-ls -la "${SCRIPT_DIR}/gitservice/" || true
+echo "DEBUG: Listing ${SCRIPT_DIR}:" 1>&2
+ls -la "${SCRIPT_DIR}/" 1>&2 || true
+echo "DEBUG: Listing ${SCRIPT_DIR}/gitservice/:" 1>&2
+ls -la "${SCRIPT_DIR}/gitservice/" 1>&2 || true
+
+# ファイルの存在確認
+echo "DEBUG: Checking files existence:" 1>&2
+test -f "${SCRIPT_DIR}/gitservice/${GITSERVICE}.sh" && echo "  ✓ gitservice/${GITSERVICE}.sh exists" 1>&2 || echo "  ✗ gitservice/${GITSERVICE}.sh NOT FOUND" 1>&2
+test -f "${SCRIPT_DIR}/storage/${STORAGESERVICE}.sh" && echo "  ✓ storage/${STORAGESERVICE}.sh exists" 1>&2 || echo "  ✗ storage/${STORAGESERVICE}.sh NOT FOUND" 1>&2
+test -f "${SCRIPT_DIR}/variables" && echo "  ✓ variables exists" 1>&2 || echo "  ✗ variables NOT FOUND" 1>&2
+echo "=== DEBUG END ===" 1>&2
 
 # 必要なスクリプトを読み込み
+echo "DEBUG: Sourcing gitservice/${GITSERVICE}.sh" 1>&2
 . "${SCRIPT_DIR}/gitservice/${GITSERVICE}.sh"
+echo "DEBUG: Sourcing storage/${STORAGESERVICE}.sh" 1>&2
 . "${SCRIPT_DIR}/storage/${STORAGESERVICE}.sh"
+echo "DEBUG: Sourcing variables" 1>&2
 . "${SCRIPT_DIR}/variables"
+echo "DEBUG: All scripts sourced successfully" 1>&2
 
 # PRに対する実行か否か
 if ! is_change_request
