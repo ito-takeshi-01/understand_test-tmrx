@@ -5,17 +5,17 @@ GIT_REPO_OWNER=$(echo "$GITHUB_URL" | sed -E 's|https?://github.com/([^/]+)/.*|\
 GIT_REPO_NAME=$(echo "$GITHUB_URL" | sed -E 's|https?://github.com/[^/]+/([^/]+)(\.git)?|\1|')
 
 # 認証情報
-GITHUB_TOKEN="${{GITHUB_CRED_PSW}}"
+GITHUB_TOKEN="${GITHUB_CRED_PSW}"
 
 export GIT_REPO_OWNER GIT_REPO_NAME GITHUB_TOKEN
 
 # PR判定関数
-is_change_request() {{
-    test -n "${{CHANGE_ID:-}}"
-}}
+is_change_request() {
+    test -n "${CHANGE_ID:-}"
+}
 
 # PRコメント投稿関数（4つの引数を受け取る）
-post_review_comment() {{
+post_review_comment() {
     local repo_owner="$1"
     local repo_name="$2"
     local pr_number="$3"
@@ -62,7 +62,7 @@ post_review_comment() {{
     echo "=========================================="
     
     # GitHub API エンドポイント
-    local api_url="https://api.github.com/repos/${{repo_owner}}/${{repo_name}}/issues/${{pr_number}}/comments"
+    local api_url="https://api.github.com/repos/${repo_owner}/${repo_name}/issues/${pr_number}/comments"
     
     echo "API URL: $api_url"
     
@@ -74,12 +74,12 @@ post_review_comment() {{
         
         # GitHub API を使ってPRにコメントを投稿
         local response
-        response=$(curl -s -w "\n%{{http_code}}" -X POST \
-            -H "Authorization: token ${{GITHUB_TOKEN}}" \
+        response=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Authorization: token ${GITHUB_TOKEN}" \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Content-Type: application/json" \
             "$api_url" \
-            -d "{{\"body\":${{json_body}}}}")
+            -d "{\"body\":${json_body}}")
         
         local http_code
         http_code=$(echo "$response" | tail -n1)
@@ -89,8 +89,8 @@ post_review_comment() {{
         echo "HTTP Status Code: $http_code"
         
         if [ "$http_code" = "201" ]; then
-            echo "? Comment posted successfully to PR #${{pr_number}}"
-            echo "Response: $response_body" | jq '{{id: .id, html_url: .html_url}}' 2>/dev/null || echo "$response_body"
+            echo "? Comment posted successfully to PR #${pr_number}"
+            echo "Response: $response_body" | jq '{id: .id, html_url: .html_url}' 2>/dev/null || echo "$response_body"
             return 0
         else
             echo "? Failed to post comment. HTTP status: $http_code"
@@ -110,12 +110,12 @@ post_review_comment() {{
             sed "s/\r//g")
         
         local response
-        response=$(curl -s -w "\n%{{http_code}}" -X POST \
-            -H "Authorization: token ${{GITHUB_TOKEN}}" \
+        response=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Authorization: token ${GITHUB_TOKEN}" \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Content-Type: application/json" \
             "$api_url" \
-            -d "{{\"body\":\"${{escaped_body}}\"}}")
+            -d "{\"body\":\"${escaped_body}\"}")
         
         local http_code
         http_code=$(echo "$response" | tail -n1)
@@ -125,7 +125,7 @@ post_review_comment() {{
         echo "HTTP Status Code: $http_code"
         
         if [ "$http_code" = "201" ]; then
-            echo "? Comment posted successfully to PR #${{pr_number}}"
+            echo "? Comment posted successfully to PR #${pr_number}"
             return 0
         else
             echo "? Failed to post comment. HTTP status: $http_code"
@@ -133,27 +133,27 @@ post_review_comment() {{
             return 1
         fi
     fi
-}}
+}
 
 # 変更ファイル取得関数
-get_changed_files() {{
+get_changed_files() {
     if is_change_request; then
         local base_commit
-        base_commit=$(git merge-base HEAD "origin/${{CHANGE_TARGET}}")
+        base_commit=$(git merge-base HEAD "origin/${CHANGE_TARGET}")
         git diff --name-only "$base_commit" HEAD
     else
         git diff --name-only HEAD^ HEAD
     fi
-}}
+}
 
 # デバッグ情報
-if [ "${{DEBUG:-}}" = "true" ]; then
+if [ "${DEBUG:-}" = "true" ]; then
     echo "=== github-jenkins.sh Loaded ==="
-    echo "GIT_REPO_OWNER: ${{GIT_REPO_OWNER}}"
-    echo "GIT_REPO_NAME: ${{GIT_REPO_NAME}}"
-    echo "GITHUB_TOKEN: ${{GITHUB_TOKEN:0:8}}... (masked)"
-    echo "CHANGE_ID: ${{CHANGE_ID:-not set}}"
-    echo "CHANGE_TARGET: ${{CHANGE_TARGET:-not set}}"
+    echo "GIT_REPO_OWNER: ${GIT_REPO_OWNER}"
+    echo "GIT_REPO_NAME: ${GIT_REPO_NAME}"
+    echo "GITHUB_TOKEN: ${GITHUB_TOKEN:0:8}... (masked)"
+    echo "CHANGE_ID: ${CHANGE_ID:-not set}"
+    echo "CHANGE_TARGET: ${CHANGE_TARGET:-not set}"
     echo "is_change_request: $(is_change_request && echo 'true' || echo 'false')"
     echo "================================="
 fi
