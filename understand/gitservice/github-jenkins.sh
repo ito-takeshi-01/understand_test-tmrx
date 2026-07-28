@@ -1,82 +1,159 @@
 #!/bin/bash
 
-# ===============================
 # リポジトリ情報の取得
-# ===============================
 GIT_REPO_OWNER=$(echo "$GITHUB_URL" | sed -E 's|https?://github.com/([^/]+)/.*|\1|')
 GIT_REPO_NAME=$(echo "$GITHUB_URL" | sed -E 's|https?://github.com/[^/]+/([^/]+)(\.git)?|\1|')
 
-# ===============================
-# 認証情報の設定
-# ===============================
-# Jenkins credentials から取得
-GITHUB_TOKEN="${GITHUB_CRED_PSW}"
+# 認証情報
+GITHUB_TOKEN="${{GITHUB_CRED_PSW}}"
 
-# export して他のスクリプトから参照可能にする
 export GIT_REPO_OWNER GIT_REPO_NAME GITHUB_TOKEN
 
-# ===============================
 # PR判定関数
-# ===============================
-is_change_request() {
-    # Jenkins の CHANGE_ID が設定されていればPRビルド
-    test -n "${CHANGE_ID:-}"
-}
+is_change_request() {{
+    test -n "${{CHANGE_ID:-}}"
+}}
 
-# ===============================
-# PRコメント投稿関数
-# ===============================
-post_review_comment() {
-    local comment_file="$1"
+# PRコメント投稿関数（4つの引数を受け取る）
+post_review_comment() {{
+    local repo_owner="$1"
+    local repo_name="$2"
+    local pr_number="$3"
+    local comment_file="$4"
     
-    if [ ! -f "$comment_file" ]; then
-        echo "Error: Comment file not found: $comment_file"
+    # デバッグ出力
+    echo "=== post_review_comment DEBUG ==="
+    echo "Repository Owner: $repo_owner"
+    echo "Repository Name: $repo_name"
+    echo "PR Number: $pr_number"
+    echo "Comment File: $comment_file"
+    echo "================================="
+    
+    # 引数チェック
+    if [ -z "$repo_owner" ] || [ -z "$repo_name" ] || [ -z "$pr_number" ] || [ -z "$comment_file" ]; then
+        echo "Error: Missing required arguments"
+        echo "Usage: post_review_comment <repo_owner> <repo_name> <pr_number> <comment_file>"
         return 1
     fi
     
+    # ファイル存在チェック
+    if [ ! -f "$comment_file" ]; then
+        echo "Error: Comment file not found: $comment_file"
+        echo "Current directory: $(pwd)"
+        echo "Absolute path: $(realpath "$comment_file" 2>/dev/null || echo "N/A")"
+        ls -la "$(dirname "$comment_file")" 2>/dev/null || echo "Directory not found"
+        return 1
+    fi
+    
+    # ファイルが空かチェック
+    if [ ! -s "$comment_file" ]; then
+        echo "Warning: Comment file is empty: $comment_file"
+        echo "Skipping comment posting."
+        return 0
+    fi
+    
+    # コメント内容を読み込み
     local comment_body
     comment_body=$(cat "$comment_file")
     
-    # GitHub API を使ってPRにコメントを投稿
-    curl -X POST \
-        -H "Authorization: token ${GITHUB_TOKEN}" \
-        -H "Accept: application/vnd.github.v3+json" \
-        "https://api.github.com/repos/${GIT_REPO_OWNER}/${GIT_REPO_NAME}/issues/${CHANGE_ID}/comments" \
-        -d "{\"body\":$(echo "$comment_body" | jq -Rs .)}"
+    echo "=== Comment Content (first 200 chars) ==="
+    echo "$comment_body" | head -c 200
+    echo ""
+    echo "=========================================="
     
-    if [ $? -eq 0 ]; then
-        echo "Comment posted successfully to PR #${CHANGE_ID}"
+    # GitHub API エンドポイント
+    local api_url="https://api.github.com/repos/${{repo_owner}}/${{repo_name}}/issues/${{pr_number}}/comments"
+    
+    echo "API URL: $api_url"
+    
+    # JSON エスケープ（jq がある場合）
+    if command -v jq &> /dev/null; then
+        echo "Using jq for JSON encoding"
+        local json_body
+        json_body=$(echo "$comment_body" | jq -Rs .)
+        
+        # GitHub API を使ってPRにコメントを投稿
+        local response
+        response=$(curl -s -w "\n%{{http_code}}" -X POST \
+            -H "Authorization: token ${{GITHUB_TOKEN}}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Content-Type: application/json" \
+            "$api_url" \
+            -d "{{\"body\":${{json_body}}}}")
+        
+        local http_code
+        http_code=$(echo "$response" | tail -n1)
+        local response_body
+        response_body=$(echo "$response" | sed '$d')
+        
+        echo "HTTP Status Code: $http_code"
+        
+        if [ "$http_code" = "201" ]; then
+            echo "? Comment posted successfully to PR #${{pr_number}}"
+            echo "Response: $response_body" | jq '{{id: .id, html_url: .html_url}}' 2>/dev/null || echo "$response_body"
+            return 0
+        else
+            echo "? Failed to post comment. HTTP status: $http_code"
+            echo "Response: $response_body"
+            return 1
+        fi
     else
-        echo "Failed to post comment to PR #${CHANGE_ID}"
-        return 1
+        # jq がない場合は簡易的なエスケープ
+        echo "Warning: jq not found. Using basic escaping."
+        
+        # 改行、ダブルクォート、バックスラッシュをエスケープ
+        local escaped_body
+        escaped_body=$(echo "$comment_body" | \
+            sed 's/\\/\\\\/g' | \
+            sed 's/"/\\"/g' | \
+            sed ':a;N;$!ba;s/\n/\\n/g' | \
+            sed "s/\r//g")
+        
+        local response
+        response=$(curl -s -w "\n%{{http_code}}" -X POST \
+            -H "Authorization: token ${{GITHUB_TOKEN}}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Content-Type: application/json" \
+            "$api_url" \
+            -d "{{\"body\":\"${{escaped_body}}\"}}")
+        
+        local http_code
+        http_code=$(echo "$response" | tail -n1)
+        local response_body
+        response_body=$(echo "$response" | sed '$d')
+        
+        echo "HTTP Status Code: $http_code"
+        
+        if [ "$http_code" = "201" ]; then
+            echo "? Comment posted successfully to PR #${{pr_number}}"
+            return 0
+        else
+            echo "? Failed to post comment. HTTP status: $http_code"
+            echo "Response: $response_body"
+            return 1
+        fi
     fi
-}
+}}
 
-# ===============================
 # 変更ファイル取得関数
-# ===============================
-get_changed_files() {
+get_changed_files() {{
     if is_change_request; then
-        # PRの場合: ベースブランチとの差分
         local base_commit
-        base_commit=$(git merge-base HEAD "origin/${CHANGE_TARGET}")
+        base_commit=$(git merge-base HEAD "origin/${{CHANGE_TARGET}}")
         git diff --name-only "$base_commit" HEAD
     else
-        # mainブランチの場合: 前回のコミットとの差分
         git diff --name-only HEAD^ HEAD
     fi
-}
+}}
 
-# ===============================
-# デバッグ情報出力
-# ===============================
-if [ "${DEBUG:-}" = "true" ]; then
-    echo "=== github-jenkins.sh DEBUG ==="
-    echo "GIT_REPO_OWNER: $GIT_REPO_OWNER"
-    echo "GIT_REPO_NAME: $GIT_REPO_NAME"
-    echo "GITHUB_TOKEN: [MASKED]"
-    echo "CHANGE_ID: ${CHANGE_ID:-not set}"
-    echo "CHANGE_TARGET: ${CHANGE_TARGET:-not set}"
+# デバッグ情報
+if [ "${{DEBUG:-}}" = "true" ]; then
+    echo "=== github-jenkins.sh Loaded ==="
+    echo "GIT_REPO_OWNER: ${{GIT_REPO_OWNER}}"
+    echo "GIT_REPO_NAME: ${{GIT_REPO_NAME}}"
+    echo "GITHUB_TOKEN: ${{GITHUB_TOKEN:0:8}}... (masked)"
+    echo "CHANGE_ID: ${{CHANGE_ID:-not set}}"
+    echo "CHANGE_TARGET: ${{CHANGE_TARGET:-not set}}"
     echo "is_change_request: $(is_change_request && echo 'true' || echo 'false')"
-    echo "==============================="
+    echo "================================="
 fi
