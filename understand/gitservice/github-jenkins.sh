@@ -1,27 +1,27 @@
 #!/bin/bash
 
-# ƒŠƒ|ƒWƒgƒŠî•ñ‚Ìæ“¾
+# ãƒªãƒã‚¸ãƒˆãƒªæƒ…å ±ã®å–å¾—
 GIT_REPO_OWNER=$(echo "$GITHUB_URL" | sed -E 's|https?://github.com/([^/]+)/.*|\1|')
 GIT_REPO_NAME=$(echo "$GITHUB_URL" | sed -E 's|https?://github.com/[^/]+/([^/]+)(\.git)?|\1|')
 
-# ”FØî•ñ
+# èªè¨¼æƒ…å ±
 GITHUB_TOKEN="${GITHUB_CRED_PSW}"
 
 export GIT_REPO_OWNER GIT_REPO_NAME GITHUB_TOKEN
 
-# PR”»’èŠÖ”
+# PRåˆ¤å®šé–¢æ•°
 is_change_request() {
     test -n "${CHANGE_ID:-}"
 }
 
-# PRƒRƒƒ“ƒg“ŠeŠÖ”i4‚Â‚Ìˆø”‚ğó‚¯æ‚éj
+# PRã‚³ãƒ¡ãƒ³ãƒˆæŠ•ç¨¿é–¢æ•°ï¼ˆ4ã¤ã®å¼•æ•°ã‚’å—ã‘å–ã‚‹ï¼‰
 post_review_comment() {
     local repo_owner="$1"
     local repo_name="$2"
     local pr_number="$3"
     local comment_file="$4"
     
-    # ƒfƒoƒbƒOo—Í
+    # ãƒ‡ãƒãƒƒã‚°å‡ºåŠ›
     echo "=== post_review_comment DEBUG ==="
     echo "Repository Owner: $repo_owner"
     echo "Repository Name: $repo_name"
@@ -29,14 +29,14 @@ post_review_comment() {
     echo "Comment File: $comment_file"
     echo "================================="
     
-    # ˆø”ƒ`ƒFƒbƒN
+    # å¼•æ•°ãƒã‚§ãƒƒã‚¯
     if [ -z "$repo_owner" ] || [ -z "$repo_name" ] || [ -z "$pr_number" ] || [ -z "$comment_file" ]; then
         echo "Error: Missing required arguments"
         echo "Usage: post_review_comment <repo_owner> <repo_name> <pr_number> <comment_file>"
         return 1
     fi
     
-    # ƒtƒ@ƒCƒ‹‘¶İƒ`ƒFƒbƒN
+    # ãƒ•ã‚¡ã‚¤ãƒ«å­˜åœ¨ãƒã‚§ãƒƒã‚¯
     if [ ! -f "$comment_file" ]; then
         echo "Error: Comment file not found: $comment_file"
         echo "Current directory: $(pwd)"
@@ -45,14 +45,14 @@ post_review_comment() {
         return 1
     fi
     
-    # ƒtƒ@ƒCƒ‹‚ª‹ó‚©ƒ`ƒFƒbƒN
+    # ãƒ•ã‚¡ã‚¤ãƒ«ãŒç©ºã‹ãƒã‚§ãƒƒã‚¯
     if [ ! -s "$comment_file" ]; then
         echo "Warning: Comment file is empty: $comment_file"
         echo "Skipping comment posting."
         return 0
     fi
     
-    # ƒRƒƒ“ƒg“à—e‚ğ“Ç‚İ‚İ
+    # ã‚³ãƒ¡ãƒ³ãƒˆå†…å®¹ã‚’èª­ã¿è¾¼ã¿
     local comment_body
     comment_body=$(cat "$comment_file")
     
@@ -61,18 +61,18 @@ post_review_comment() {
     echo ""
     echo "=========================================="
     
-    # GitHub API ƒGƒ“ƒhƒ|ƒCƒ“ƒg
+    # GitHub API ã‚¨ãƒ³ãƒ‰ãƒã‚¤ãƒ³ãƒˆ
     local api_url="https://api.github.com/repos/${repo_owner}/${repo_name}/issues/${pr_number}/comments"
     
     echo "API URL: $api_url"
     
-    # JSON ƒGƒXƒP[ƒvijq ‚ª‚ ‚éê‡j
+    # JSON ã‚¨ã‚¹ã‚±ãƒ¼ãƒ—ï¼ˆjq ãŒã‚ã‚‹å ´åˆï¼‰
     if command -v jq &> /dev/null; then
         echo "Using jq for JSON encoding"
         local json_body
         json_body=$(echo "$comment_body" | jq -Rs .)
         
-        # GitHub API ‚ğg‚Á‚ÄPR‚ÉƒRƒƒ“ƒg‚ğ“Še
+        # GitHub API ã‚’ä½¿ã£ã¦PRã«ã‚³ãƒ¡ãƒ³ãƒˆã‚’æŠ•ç¨¿
         local response
         response=$(curl -s -w "\n%{http_code}" -X POST \
             -H "Authorization: token ${GITHUB_TOKEN}" \
@@ -89,19 +89,19 @@ post_review_comment() {
         echo "HTTP Status Code: $http_code"
         
         if [ "$http_code" = "201" ]; then
-            echo "? Comment posted successfully to PR #${pr_number}"
+            echo "âœ“ Comment posted successfully to PR #${pr_number}"
             echo "Response: $response_body" | jq '{id: .id, html_url: .html_url}' 2>/dev/null || echo "$response_body"
             return 0
         else
-            echo "? Failed to post comment. HTTP status: $http_code"
+            echo "âœ— Failed to post comment. HTTP status: $http_code"
             echo "Response: $response_body"
             return 1
         fi
     else
-        # jq ‚ª‚È‚¢ê‡‚ÍŠÈˆÕ“I‚ÈƒGƒXƒP[ƒv
+        # jq ãŒãªã„å ´åˆã¯ç°¡æ˜“çš„ãªã‚¨ã‚¹ã‚±ãƒ¼ãƒ—
         echo "Warning: jq not found. Using basic escaping."
         
-        # ‰üsAƒ_ƒuƒ‹ƒNƒH[ƒgAƒoƒbƒNƒXƒ‰ƒbƒVƒ…‚ğƒGƒXƒP[ƒv
+        # æ”¹è¡Œã€ãƒ€ãƒ–ãƒ«ã‚¯ã‚©ãƒ¼ãƒˆã€ãƒãƒƒã‚¯ã‚¹ãƒ©ãƒƒã‚·ãƒ¥ã‚’ã‚¨ã‚¹ã‚±ãƒ¼ãƒ—
         local escaped_body
         escaped_body=$(echo "$comment_body" | \
             sed 's/\\/\\\\/g' | \
@@ -125,17 +125,17 @@ post_review_comment() {
         echo "HTTP Status Code: $http_code"
         
         if [ "$http_code" = "201" ]; then
-            echo "? Comment posted successfully to PR #${pr_number}"
+            echo "âœ“ Comment posted successfully to PR #${pr_number}"
             return 0
         else
-            echo "? Failed to post comment. HTTP status: $http_code"
+            echo "âœ— Failed to post comment. HTTP status: $http_code"
             echo "Response: $response_body"
             return 1
         fi
     fi
 }
 
-# •ÏXƒtƒ@ƒCƒ‹æ“¾ŠÖ”
+# å¤‰æ›´ãƒ•ã‚¡ã‚¤ãƒ«å–å¾—é–¢æ•°
 get_changed_files() {
     if is_change_request; then
         local base_commit
@@ -146,7 +146,7 @@ get_changed_files() {
     fi
 }
 
-# ƒfƒoƒbƒOî•ñ
+# ãƒ‡ãƒãƒƒã‚°æƒ…å ±
 if [ "${DEBUG:-}" = "true" ]; then
     echo "=== github-jenkins.sh Loaded ==="
     echo "GIT_REPO_OWNER: ${GIT_REPO_OWNER}"
