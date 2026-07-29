@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 # リポジトリ情報の取得
@@ -66,72 +67,71 @@ post_review_comment() {
     
     echo "API URL: $api_url"
     
-    # JSON エスケープ（jq がある場合）
+    # JSON エスケープ
+    local json_body
+    
+    # jq がある場合
     if command -v jq &> /dev/null; then
         echo "Using jq for JSON encoding"
-        local json_body
         json_body=$(echo "$comment_body" | jq -Rs .)
-        
-        # GitHub API を使ってPRにコメントを投稿
-        local response
-        response=$(curl -s -w "\n%{http_code}" -X POST \
-            -H "Authorization: token ${GITHUB_TOKEN}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Content-Type: application/json" \
-            "$api_url" \
-            -d "{\"body\":${json_body}}")
-        
-        local http_code
-        http_code=$(echo "$response" | tail -n1)
-        local response_body
-        response_body=$(echo "$response" | sed '$d')
-        
-        echo "HTTP Status Code: $http_code"
-        
-        if [ "$http_code" = "201" ]; then
-            echo "✓ Comment posted successfully to PR #${pr_number}"
-            echo "Response: $response_body" | jq '{id: .id, html_url: .html_url}' 2>/dev/null || echo "$response_body"
-            return 0
-        else
-            echo "✗ Failed to post comment. HTTP status: $http_code"
-            echo "Response: $response_body"
-            return 1
-        fi
+    # Python3 がある場合
+    elif command -v python3 &> /dev/null; then
+        echo "Using python3 for JSON encoding"
+        json_body=$(python3 -c "import json, sys; print(json.dumps(sys.stdin.read()))" <<< "$comment_body")
+    # Python がある場合
+    elif command -v python &> /dev/null; then
+        echo "Using python for JSON encoding"
+        json_body=$(python -c "import json, sys; print(json.dumps(sys.stdin.read()))" <<< "$comment_body")
     else
-        # jq がない場合は簡易的なエスケープ
-        echo "Warning: jq not found. Using basic escaping."
+        echo "Error: No JSON encoder found (jq, python3, or python)"
+        echo "Please install jq or ensure Python is available"
+        return 1
+    fi
+    
+    # デバッグ: エスケープ後のJSON確認
+    echo "=== Escaped JSON (first 300 chars) ==="
+    echo "$json_body" | head -c 300
+    echo ""
+    echo "======================================="
+    
+    # GitHub API を使ってPRにコメントを投稿
+    local response
+    response=$(curl -s -w "\n%{http_code}" -X POST \
+        -H "Authorization: token ${GITHUB_TOKEN}" \
+        -H "Accept: application/vnd.github.v3+json" \
+        -H "Content-Type: application/json" \
+        "$api_url" \
+        -d "{\"body\":${json_body}}")
+    
+    local http_code
+    http_code=$(echo "$response" | tail -n1)
+    local response_body
+    response_body=$(echo "$response" | sed '$d')
+    
+    echo "HTTP Status Code: $http_code"
+    
+    if [ "$http_code" = "201" ]; then
+        echo "✓ Comment posted successfully to PR #${pr_number}"
         
-        # 改行、ダブルクォート、バックスラッシュをエスケープ
-        local escaped_body
-        escaped_body=$(echo "$comment_body" | \
-            sed 's/\\/\\\\/g' | \
-            sed 's/"/\\"/g' | \
-            sed ':a;N;$!ba;s/\n/\\n/g' | \
-            sed "s/\r//g")
-        
-        local response
-        response=$(curl -s -w "\n%{http_code}" -X POST \
-            -H "Authorization: token ${GITHUB_TOKEN}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Content-Type: application/json" \
-            "$api_url" \
-            -d "{\"body\":\"${escaped_body}\"}")
-        
-        local http_code
-        http_code=$(echo "$response" | tail -n1)
-        local response_body
-        response_body=$(echo "$response" | sed '$d')
-        
-        echo "HTTP Status Code: $http_code"
-        
-        if [ "$http_code" = "201" ]; then
-            echo "✓ Comment posted successfully to PR #${pr_number}"
-            return 0
+        # レスポンスからコメントURLを抽出
+        if command -v jq &> /dev/null; then
+            echo "Comment URL: $(echo "$response_body" | jq -r '.html_url')"
         else
-            echo "✗ Failed to post comment. HTTP status: $http_code"
             echo "Response: $response_body"
-            return 1
         fi
+        return 0
+    else
+        echo "✗ Failed to post comment. HTTP status: $http_code"
+        echo "Response: $response_body"
+        
+        # デバッグ情報
+        echo ""
+        echo "=== Debug Info ==="
+        echo "Request body that was sent:"
+        echo "{\"body\":${json_body}}"
+        echo "=================="
+        
+        return 1
     fi
 }
 
@@ -155,5 +155,11 @@ if [ "${DEBUG:-}" = "true" ]; then
     echo "CHANGE_ID: ${CHANGE_ID:-not set}"
     echo "CHANGE_TARGET: ${CHANGE_TARGET:-not set}"
     echo "is_change_request: $(is_change_request && echo 'true' || echo 'false')"
+    
+    # 利用可能なJSONエンコーダーを確認
+    echo "Available JSON encoders:"
+    command -v jq &> /dev/null && echo "  ✓ jq" || echo "  ✗ jq"
+    command -v python3 &> /dev/null && echo "  ✓ python3" || echo "  ✗ python3"
+    command -v python &> /dev/null && echo "  ✓ python" || echo "  ✗ python"
     echo "================================="
 fi
