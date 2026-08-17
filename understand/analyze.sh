@@ -21,12 +21,9 @@ echo "DEBUG: GIT_COMMIT = '$GIT_COMMIT'" >&2
 echo "DEBUG: PREV_UND_DB_ARCHIVE = '$PREV_UND_DB_ARCHIVE'" >&2
 echo "DEBUG: UND_DB_ARCHIVE = '$UND_DB_ARCHIVE'" >&2
 
-# Gitリポジトリのルートディレクトリに移動
-cd "$SCRIPT_DIR/.."
-
-# デバッグ: 現在のディレクトリとGit状態を確認
-echo "DEBUG: Current directory = '$(pwd)'" >&2
-echo "DEBUG: Git root = '$(git rev-parse --show-toplevel 2>/dev/null || echo 'Not a git repository')'" >&2
+# Gitリポジトリのルートディレクトリを取得
+GIT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+echo "DEBUG: GIT_ROOT = '$GIT_ROOT'" >&2
 
 # 前回の解析データを取得
 if get_analysis_data "$GIT_REPO_OWNER" "$GIT_REPO_NAME" "$PREV_COMMIT" "$PREV_UND_DB_ARCHIVE"
@@ -34,11 +31,11 @@ then
     tar xzf "$PREV_UND_DB_ARCHIVE" -C "$SCRIPT_DIR"
     rm -rf "$PREV_UND_DB_ARCHIVE"
     rm -rf "$SCRIPT_DIR/$UND_DB_DIR"
-    und create -db "$SCRIPT_DIR/$UND_DB_DIR" -gitcommit "$GIT_COMMIT" -refdb "$SCRIPT_DIR/$PREV_UND_DB_DIR"
+    und create -db "$SCRIPT_DIR/$UND_DB_DIR" -gitcommit "$GIT_COMMIT" -gitdir "$GIT_ROOT/.git" -refdb "$SCRIPT_DIR/$PREV_UND_DB_DIR"
     und settings -ComparisonProjectPath "$SCRIPT_DIR/$PREV_UND_DB_DIR" "$SCRIPT_DIR/$UND_DB_DIR"
 else
     rm -rf "$SCRIPT_DIR/$UND_DB_DIR"
-    und create -db "$SCRIPT_DIR/$UND_DB_DIR" -gitcommit "$GIT_COMMIT"
+    und create -db "$SCRIPT_DIR/$UND_DB_DIR" -gitcommit "$GIT_COMMIT" -gitdir "$GIT_ROOT/.git"
     mkdir -p "$SCRIPT_DIR/$UND_DB_DIR/local"
     und settings @"$SCRIPT_DIR/settings" -db "$SCRIPT_DIR/$UND_DB_DIR"
     und add @"$SCRIPT_DIR/files" -db "$SCRIPT_DIR/$UND_DB_DIR"
@@ -47,13 +44,10 @@ fi
 # 解析を実行
 und analyze "$SCRIPT_DIR/$UND_DB_DIR"
 
-# understandディレクトリに戻る
-cd "$SCRIPT_DIR"
-
-tar czf "$UND_DB_ARCHIVE" "$UND_DB_DIR"
+tar czf "$SCRIPT_DIR/$UND_DB_ARCHIVE" -C "$SCRIPT_DIR" "$UND_DB_DIR"
 
 # 解析データをアップロード
 if [ "${1:-}" = '--upload' ]
 then
-    put_analysis_data "$GIT_REPO_OWNER" "$GIT_REPO_NAME" "$GIT_COMMIT" "$UND_DB_ARCHIVE"
+    put_analysis_data "$GIT_REPO_OWNER" "$GIT_REPO_NAME" "$GIT_COMMIT" "$SCRIPT_DIR/$UND_DB_ARCHIVE"
 fi
