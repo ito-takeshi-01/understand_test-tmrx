@@ -33,9 +33,8 @@ then
     exit 0
 fi
 
-# 比較設定の確認
-echo "DEBUG: Checking comparison settings..." >&2
-und settings -ComparisonProjectPath "$UND_DB_DIR" >&2
+# 比較設定は analyze.sh で設定済み
+echo "DEBUG: Using comparison DB: $PREV_UND_DB_DIR" >&2
 
 # 作業用ファイル・ディレクトリ
 functions_list_file=$(mktemp)
@@ -51,11 +50,15 @@ cleanup() {
 trap cleanup EXIT
 
 # 変更された関数のリストを作成
+echo "DEBUG: Exporting changes..." >&2
 und export -db "$UND_DB_DIR" \
     -changes \
     -columns "Percent Changed,Long Name,File Name,Unique Name" \
     -kinds "Function, Procedure, Subroutine, Method" \
-    "$functions_list_file"
+    "$functions_list_file" 2>&1 | tee /dev/stderr
+
+echo "DEBUG: functions_list_file content:" >&2
+cat "$functions_list_file" >&2
 
 if [ $(wc --lines < "$functions_list_file") -eq 1 ]
 then
