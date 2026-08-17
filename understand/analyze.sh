@@ -27,7 +27,8 @@ then
     tar xzf "$PREV_UND_DB_ARCHIVE" -C "$SCRIPT_DIR"
     rm -rf "$PREV_UND_DB_ARCHIVE"
     rm -rf "$SCRIPT_DIR/$UND_DB_DIR"
-    und create -db "$SCRIPT_DIR/$UND_DB_DIR" -refdb "$SCRIPT_DIR/$PREV_UND_DB_DIR"
+    # 前回のDBをコピーして新しいDBを作成
+    cp -r "$SCRIPT_DIR/$PREV_UND_DB_DIR" "$SCRIPT_DIR/$UND_DB_DIR"
     und settings -ComparisonProjectPath "$SCRIPT_DIR/$PREV_UND_DB_DIR" "$SCRIPT_DIR/$UND_DB_DIR"
 else
     rm -rf "$SCRIPT_DIR/$UND_DB_DIR"
@@ -43,7 +44,7 @@ und analyze "$SCRIPT_DIR/$UND_DB_DIR"
 tar czf "$SCRIPT_DIR/$UND_DB_ARCHIVE" -C "$SCRIPT_DIR" "$UND_DB_DIR"
 
 # 解析データをアップロード
-if [ "${{1:-}}" = '--upload' ]
+if [ "${1:-}" = '--upload' ]
 then
     put_analysis_data "$GIT_REPO_OWNER" "$GIT_REPO_NAME" "$GIT_COMMIT" "$SCRIPT_DIR/$UND_DB_ARCHIVE"
 fi
