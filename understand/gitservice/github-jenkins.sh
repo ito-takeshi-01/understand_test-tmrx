@@ -107,6 +107,17 @@ post_review_comment() {
     fi
 }
 
+# ベースコミット取得関数
+get_base_commit() {
+    if is_change_request; then
+        # PRの場合、ターゲットブランチのHEADを取得
+        git rev-parse "origin/${CHANGE_TARGET}"
+    else
+        # PRでない場合、前回のコミットを返す
+        echo "${GIT_PREVIOUS_COMMIT:-}"
+    fi
+}
+
 # 変更ファイル取得関数
 get_changed_files() {
     if is_change_request; then
