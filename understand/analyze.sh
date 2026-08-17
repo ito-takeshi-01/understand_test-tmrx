@@ -8,6 +8,13 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/storage/$STORAGESERVICE.sh"
 . "$SCRIPT_DIR/variables"
 
+# ベースコミットを取得（PRの場合はターゲットブランチのHEAD）
+PREV_COMMIT=$(get_base_commit)
+
+# デバッグ出力
+echo "DEBUG: PREV_COMMIT = '$PREV_COMMIT'" >&2
+echo "DEBUG: GIT_COMMIT = '$GIT_COMMIT'" >&2
+
 # 前回の解析データを取得
 if get_analysis_data "$GIT_REPO_OWNER" "$GIT_REPO_NAME" "$PREV_COMMIT" "$PREV_UND_DB_ARCHIVE"
 then
