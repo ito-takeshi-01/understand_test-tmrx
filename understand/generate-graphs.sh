@@ -4,7 +4,20 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/gitservice/$GITSERVICE.sh"
 . "$SCRIPT_DIR/storage/$STORAGESERVICE.sh"
+
+# ベースコミットを取得（PRの場合はターゲットブランチのHEAD）
+PREV_COMMIT=$(get_base_commit)
+
+# デバッグ出力
+echo "DEBUG: PREV_COMMIT (before variables) = '$PREV_COMMIT'" >&2
+
+# 変数ファイルを読み込み
 . "$SCRIPT_DIR/variables"
+
+# デバッグ出力
+echo "DEBUG: PREV_COMMIT (after variables) = '$PREV_COMMIT'" >&2
+echo "DEBUG: PREV_UND_DB_DIR = '$PREV_UND_DB_DIR'" >&2
+echo "DEBUG: UND_DB_DIR = '$UND_DB_DIR'" >&2
 
 # PRに対する実行か否か
 if ! is_change_request
@@ -20,9 +33,7 @@ then
     exit 0
 fi
 
-# デバッグ出力
-echo "DEBUG: PREV_UND_DB_DIR = '$PREV_UND_DB_DIR'" >&2
-echo "DEBUG: UND_DB_DIR = '$UND_DB_DIR'" >&2
+# 比較設定の確認
 echo "DEBUG: Checking comparison settings..." >&2
 und settings -ComparisonProjectPath "$UND_DB_DIR" >&2
 
