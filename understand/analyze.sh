@@ -21,28 +21,38 @@ echo "DEBUG: GIT_COMMIT = '$GIT_COMMIT'" >&2
 echo "DEBUG: PREV_UND_DB_ARCHIVE = '$PREV_UND_DB_ARCHIVE'" >&2
 echo "DEBUG: UND_DB_ARCHIVE = '$UND_DB_ARCHIVE'" >&2
 
+# 作業ディレクトリを保存
+WORK_DIR="$(pwd)"
+
+# Gitリポジトリのルートに移動
+cd "$SCRIPT_DIR/.."
+
 # 前回の解析データを取得
 if get_analysis_data "$GIT_REPO_OWNER" "$GIT_REPO_NAME" "$PREV_COMMIT" "$PREV_UND_DB_ARCHIVE"
 then
-    tar xzf "$PREV_UND_DB_ARCHIVE"
+    tar xzf "$PREV_UND_DB_ARCHIVE" -C "$WORK_DIR"
     rm -rf "$PREV_UND_DB_ARCHIVE"
-    rm -rf "$UND_DB_DIR"
-    und create -db "$UND_DB_DIR" -gitcommit "$GIT_COMMIT" -refdb "$PREV_UND_DB_DIR"
-    und settings -ComparisonProjectPath "$PREV_UND_DB_DIR" "$UND_DB_DIR"
+    rm -rf "$WORK_DIR/$UND_DB_DIR"
+    und create -db "$WORK_DIR/$UND_DB_DIR" -gitcommit "$GIT_COMMIT" -refdb "$WORK_DIR/$PREV_UND_DB_DIR"
+    und settings -ComparisonProjectPath "$WORK_DIR/$PREV_UND_DB_DIR" "$WORK_DIR/$UND_DB_DIR"
 else
-    rm -rf "$UND_DB_DIR"
-    und create -db "$UND_DB_DIR" -gitcommit "$GIT_COMMIT"
-    mkdir -p "$UND_DB_DIR/local"
-    und settings @"$SCRIPT_DIR/settings" -db "$UND_DB_DIR"
-    und add @"$SCRIPT_DIR/files" -db "$UND_DB_DIR"
+    rm -rf "$WORK_DIR/$UND_DB_DIR"
+    und create -db "$WORK_DIR/$UND_DB_DIR" -gitcommit "$GIT_COMMIT"
+    mkdir -p "$WORK_DIR/$UND_DB_DIR/local"
+    und settings @"$SCRIPT_DIR/settings" -db "$WORK_DIR/$UND_DB_DIR"
+    und add @"$SCRIPT_DIR/files" -db "$WORK_DIR/$UND_DB_DIR"
 fi
 
 # 解析を実行
-und analyze "$UND_DB_DIR"
+und analyze "$WORK_DIR/$UND_DB_DIR"
+
+# 元のディレクトリに戻る
+cd "$WORK_DIR"
+
 tar czf "$UND_DB_ARCHIVE" "$UND_DB_DIR"
 
 # 解析データをアップロード
-if [ "${1:-}" = '--upload' ]
+if [ "${{1:-}}" = '--upload' ]
 then
     put_analysis_data "$GIT_REPO_OWNER" "$GIT_REPO_NAME" "$GIT_COMMIT" "$UND_DB_ARCHIVE"
 fi
