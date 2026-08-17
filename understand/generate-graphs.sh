@@ -1,9 +1,10 @@
 #!/bin/sh -eux
 # 変更された関数のグラフをPRにフィードバック
 
-. "${0%/*}/gitservice/${GITSERVICE}.sh"
-. "${0%/*}/storage/${STORAGESERVICE}.sh"
-. "${0%/*}/variables"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/gitservice/$GITSERVICE.sh"
+. "$SCRIPT_DIR/storage/$STORAGESERVICE.sh"
+. "$SCRIPT_DIR/variables"
 
 # PRに対する実行か否か
 if ! is_change_request
@@ -59,7 +60,7 @@ do
 done
 
 # 変更された関数の画像を生成・アップロード
-uperl "${0%/*}/_export_graphics_.pl" \
+uperl "$SCRIPT_DIR/_export_graphics_.pl" \
 	-db "${UND_DB_DIR}" \
 	-ents "${unique_names_list_file}" \
 	-format svg \
