@@ -22,7 +22,7 @@ echo "DEBUG: UND_DB_DIR = '$UND_DB_DIR'" >&2
 # PRに対する実行か否か
 if ! is_change_request
 then
-    echo 'PRに対する実行ではありません。' >&2
+    echo 'PRに対する実行ではありません。' 1>&2
     exit 1
 fi
 
@@ -52,13 +52,11 @@ trap cleanup EXIT
 # 変更された関数のリストを作成
 echo "DEBUG: Exporting changes..." >&2
 und export -db "$UND_DB_DIR" \
-    -cmpdb "$PREV_UND_DB_DIR" \
     -changes \
     -columns "Percent Changed,Long Name,File Name,Unique Name" \
     -kinds "Function, Procedure, Subroutine, Method" \
-    "$functions_list_file"
+    "$functions_list_file" 2>&1 | tee /dev/stderr
 
-echo "DEBUG: Export exit code: $?" >&2
 echo "DEBUG: functions_list_file content:" >&2
 cat "$functions_list_file" >&2
 
