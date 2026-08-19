@@ -55,37 +55,64 @@ post_review_comment() {
     local api_url="https://api.github.com/repos/${repo_owner}/${repo_name}/issues/${pr_number}/comments"
     echo "API URL: $api_url" >&2
     
-    # JSON生成（jqの--rawfileオプションを使用）
+    # Python3を優先的に使用（文字エンコーディング処理が確実）
     local payload
-    if command -v jq &> /dev/null; then
+    if command -v python3 &> /dev/null; then
+        echo "Using python3 for JSON encoding (UTF-8 safe)" >&2
+        
+        payload=$(python3 << 'PYTHON_SCRIPT'
+import json
+import sys
+import os
+
+comment_file = sys.argv[1]
+
+try:
+    # まずUTF-8で読み込みを試行
+    try:
+        with open(comment_file, 'r', encoding='utf-8') as f:
+            body = f.read()
+    except UnicodeDecodeError:
+        # UTF-8で失敗した場合、CP932で読み込み
+        with open(comment_file, 'r', encoding='cp932') as f:
+            body = f.read()
+    
+    # JSON生成（ensure_ascii=Falseで日本語をそのまま出力）
+    payload = json.dumps({'body': body}, ensure_ascii=False, indent=2)
+    print(payload)
+    
+except Exception as e:
+    print(f'Error: {e}', file=sys.stderr)
+    sys.exit(1)
+PYTHON_SCRIPT
+ "$comment_file")
+        
+        if [ $? -ne 0 ]; then
+            echo "Error: Failed to create JSON payload with python3" >&2
+            return 1
+        fi
+        
+    elif command -v jq &> /dev/null; then
         echo "Using jq for JSON encoding" >&2
-        # --rawfile でファイル全体を変数として読み込み、jqが自動的にエスケープ
-        payload=$(jq -n --rawfile body "$comment_file" '{body: $body}')
+        
+        # iconv で UTF-8 に変換してから jq に渡す
+        local utf8_file="${comment_file}.utf8"
+        if command -v iconv &> /dev/null; then
+            echo "Converting to UTF-8 with iconv..." >&2
+            iconv -f CP932 -t UTF-8 "$comment_file" > "$utf8_file" 2>/dev/null || cp "$comment_file" "$utf8_file"
+        else
+            cp "$comment_file" "$utf8_file"
+        fi
+        
+        payload=$(jq -n --rawfile body "$utf8_file" '{body: $body}')
+        rm -f "$utf8_file"
         
         if [ $? -ne 0 ]; then
             echo "Error: Failed to create JSON payload with jq" >&2
             return 1
         fi
-    elif command -v python3 &> /dev/null; then
-        echo "Using python3 for JSON encoding" >&2
-        payload=$(python3 -c "
-import json
-import sys
-
-try:
-    with open('$comment_file', 'r', encoding='utf-8') as f:
-        body = f.read()
-    print(json.dumps({'body': body}))
-except Exception as e:
-    print(f'Error: {e}', file=sys.stderr)
-    sys.exit(1)
-")
-        if [ $? -ne 0 ]; then
-            echo "Error: Failed to create JSON payload with python3" >&2
-            return 1
-        fi
     else
-        echo "Error: No JSON encoder found (jq or python3 required)" >&2
+        echo "Error: No JSON encoder found (python3 or jq required)" >&2
         return 1
     fi
     
@@ -95,14 +122,21 @@ except Exception as e:
     echo "" >&2
     echo "============================================" >&2
     
-    # GitHub APIへリクエスト送信
+    # 一時ファイルに保存してバイナリ送信
+    local payload_file=$(mktemp)
+    echo "$payload" > "$payload_file"
+    
+    # GitHub APIへリクエスト送信（ファイルから直接送信）
     local response
     response=$(curl -s -w "\n%{http_code}" -X POST \
         -H "Authorization: token ${GITHUB_TOKEN}" \
         -H "Accept: application/vnd.github.v3+json" \
         -H "Content-Type: application/json; charset=utf-8" \
         "$api_url" \
-        --data-binary "$payload")
+        --data-binary "@${payload_file}")
+    
+    # 一時ファイル削除
+    rm -f "$payload_file"
     
     # HTTPステータスコード取得
     local http_code
@@ -134,6 +168,7 @@ except Exception as e:
         echo "=== Debug Info ===" >&2
         echo "Payload that was sent:" >&2
         echo "$payload" | head -n 20 >&2
+        echo "Payload size: $(echo "$payload" | wc -c) bytes" >&2
         echo "==================" >&2
         
         return 1
