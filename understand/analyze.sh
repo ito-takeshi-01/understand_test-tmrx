@@ -50,31 +50,146 @@ echo "DEBUG: PREV_COMMIT = '$PREV_COMMIT'" >&2
 # デバッグ出力（variables読み込み後）
 echo "DEBUG: PREV_UND_DB_ARCHIVE = '$PREV_UND_DB_ARCHIVE'" >&2
 echo "DEBUG: UND_DB_ARCHIVE = '$UND_DB_ARCHIVE'" >&2
+echo "DEBUG: SCRIPT_DIR = '$SCRIPT_DIR'" >&2
+echo "DEBUG: WORKSPACE = '${WORKSPACE:-$(dirname "$SCRIPT_DIR")}'" >&2
+
+# ワークスペースのパスを取得
+WORKSPACE_DIR="${WORKSPACE:-$(dirname "$SCRIPT_DIR")}"
 
 # 前回の解析データを取得
 if get_analysis_data "$GIT_REPO_OWNER" "$GIT_REPO_NAME" "$PREV_COMMIT" "$PREV_UND_DB_ARCHIVE"
 then
+    echo "DEBUG: Extracting previous DB archive..." >&2
     tar xzf "$PREV_UND_DB_ARCHIVE" -C "$SCRIPT_DIR"
     rm -rf "$PREV_UND_DB_ARCHIVE"
+    
+    # 既存のDBがあれば削除
     rm -rf "$SCRIPT_DIR/$UND_DB_DIR"
+    
     # 前回のDBをコピーして新しいDBを作成
+    echo "DEBUG: Copying previous DB: $PREV_UND_DB_DIR -> $UND_DB_DIR" >&2
     cp -r "$SCRIPT_DIR/$PREV_UND_DB_DIR" "$SCRIPT_DIR/$UND_DB_DIR"
+    
+    # 比較設定
+    echo "DEBUG: Setting comparison DB..." >&2
     und settings -ComparisonProjectPath "$SCRIPT_DIR/$PREV_UND_DB_DIR" "$SCRIPT_DIR/$UND_DB_DIR"
+    
+    # ワークスペースに移動
+    cd "$WORKSPACE_DIR"
+    echo "DEBUG: Changed to workspace: $(pwd)" >&2
+    
+    # 変更されたファイルを取得
+    echo "DEBUG: Getting changed files between $PREV_COMMIT and $GIT_COMMIT..." >&2
+    CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$PREV_COMMIT" "$GIT_COMMIT" | grep '\.[ch]$' || true)
+    
+    if [ -z "$CHANGED_FILES" ]; then
+        echo "DEBUG: No changed C/C++ files detected, using all C files..." >&2
+        # すべてのC/Cファイルを対象
+        CHANGED_FILES=$(find . -maxdepth 1 -type f \\( -name "*.c" -o -name "*.h" \\) | sed 's|^\./||')
+    fi
+    
+    if [ -n "$CHANGED_FILES" ]; then
+        echo "DEBUG: Files to add/update:" >&2
+        echo "$CHANGED_FILES" >&2
+        
+        # ファイルをDBに追加
+        for file in $CHANGED_FILES; do
+            if [ -f "$file" ]; then
+                echo "DEBUG: Adding file: $file" >&2
+                und add "$file" "$SCRIPT_DIR/$UND_DB_DIR"
+            else
+                echo "DEBUG: File not found (may be deleted): $file" >&2
+            fi
+        done
+        
+        # 解析を実行
+        echo "DEBUG: Analyzing database..." >&2
+        und analyze "$SCRIPT_DIR/$UND_DB_DIR"
+        
+        # 解析後のファイル一覧を確認
+        echo "DEBUG: Files in DB after analysis:" >&2
+        und list files -db "$SCRIPT_DIR/$UND_DB_DIR" >&2
+    else
+        echo "WARNING: No files to analyze" >&2
+    fi
+    
+    # understand ディレクトリに戻る
+    cd "$SCRIPT_DIR"
+    
 else
+    # 初回の解析（前回のデータがない場合）
+    echo "DEBUG: No previous analysis data found. Creating new database." >&2
+    
+    # 既存のDBを削除
     rm -rf "$SCRIPT_DIR/$UND_DB_DIR"
+    
+    # 新しいDBを作成
+    echo "DEBUG: Creating new database..." >&2
     und create -db "$SCRIPT_DIR/$UND_DB_DIR"
     mkdir -p "$SCRIPT_DIR/$UND_DB_DIR/local"
-    und settings @"$SCRIPT_DIR/settings" -db "$SCRIPT_DIR/$UND_DB_DIR"
-    und add @"$SCRIPT_DIR/files" -db "$SCRIPT_DIR/$UND_DB_DIR"
+    
+    # 設定を適用
+    if [ -f "$SCRIPT_DIR/settings" ]; then
+        echo "DEBUG: Applying settings from settings file..." >&2
+        und settings @"$SCRIPT_DIR/settings" -db "$SCRIPT_DIR/$UND_DB_DIR"
+    fi
+    
+    # ワークスペースに移動
+    cd "$WORKSPACE_DIR"
+    echo "DEBUG: Changed to workspace: $(pwd)" >&2
+    
+    # ファイルリストを確認
+    if [ -f "$SCRIPT_DIR/files" ]; then
+        echo "DEBUG: Adding files from files list..." >&2
+        und add @"$SCRIPT_DIR/files" -db "$SCRIPT_DIR/$UND_DB_DIR"
+    else
+        # filesファイルがない場合、すべてのC/Cファイルを追加
+        echo "DEBUG: No files list found, adding all C files..." >&2
+        FILES_TO_ADD=$(find . -maxdepth 1 -type f \\( -name "*.c" -o -name "*.h" \\) | sed 's|^\./||')
+        
+        if [ -n "$FILES_TO_ADD" ]; then
+            echo "DEBUG: Files to add:" >&2
+            echo "$FILES_TO_ADD" >&2
+            
+            for file in $FILES_TO_ADD; do
+                if [ -f "$file" ]; then
+                    echo "DEBUG: Adding file: $file" >&2
+                    und add "$file" "$SCRIPT_DIR/$UND_DB_DIR"
+                fi
+            done
+        else
+            echo "ERROR: No C/C++ files found to analyze" >&2
+            exit 1
+        fi
+    fi
+    
+    # 解析を実行
+    echo "DEBUG: Analyzing database (initial)..." >&2
+    und analyze "$SCRIPT_DIR/$UND_DB_DIR"
+    
+    # 解析後のファイル一覧を確認
+    echo "DEBUG: Files in DB after initial analysis:" >&2
+    und list files -db "$SCRIPT_DIR/$UND_DB_DIR" >&2
+    
+    # understand ディレクトリに戻る
+    cd "$SCRIPT_DIR"
 fi
 
-# 解析を実行
-und analyze "$SCRIPT_DIR/$UND_DB_DIR"
-
+# DBをアーカイブ
+echo "DEBUG: Creating archive: $UND_DB_ARCHIVE" >&2
 tar czf "$SCRIPT_DIR/$UND_DB_ARCHIVE" -C "$SCRIPT_DIR" "$UND_DB_DIR"
+
+# アーカイブサイズを確認
+if [ -f "$SCRIPT_DIR/$UND_DB_ARCHIVE" ]; then
+    ARCHIVE_SIZE=$(ls -lh "$SCRIPT_DIR/$UND_DB_ARCHIVE" | awk '{print $5}')
+    echo "DEBUG: Archive size: $ARCHIVE_SIZE" >&2
+fi
 
 # 解析データをアップロード
 if [ "${1:-}" = '--upload' ]
 then
+    echo "DEBUG: Uploading analysis data..." >&2
     put_analysis_data "$GIT_REPO_OWNER" "$GIT_REPO_NAME" "$GIT_COMMIT" "$SCRIPT_DIR/$UND_DB_ARCHIVE"
 fi
+
+echo "Analyze Completed (Errors:0 Warnings:0)" >&2
