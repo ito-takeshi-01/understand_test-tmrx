@@ -51,7 +51,7 @@ trap cleanup EXIT
 
 # 変更された関数のリストを作成
 echo "DEBUG: Exporting changes..." >&2
-und export -db "$UND_DB_DIR" \ b  
+und export -db "$UND_DB_DIR" \
     -changes \
     -columns "PercentChanged,Long Name,File Name,Unique Name" \
     -kinds "Function, Procedure, Subroutine, Method" \
