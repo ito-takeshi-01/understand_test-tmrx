@@ -86,10 +86,8 @@ then
     
     if [ -z "$CHANGED_FILES" ]; then
         echo "DEBUG: No changed C/C++ files detected, searching recursively for all C/H files..." >&2
-        # すべてのサブディレクトリを再帰的に検索（.git と understand ディレクトリを除外）
-        CHANGED_FILES=$(find . -type f \\( -name "*.c" -o -name "*.h" \\) ! -path "./.git/*" ! -path "./understand/*" | sed 's|^\./||')
+        CHANGED_FILES=$(find . -type f '(' -name "*.c" -o -name "*.h" ')' ! -path "./.git/*" ! -path "./understand/*" | sed 's|^\./||')
         
-        # ファイル数をカウント
         FILE_COUNT=$(echo "$CHANGED_FILES" | grep -c . || echo 0)
         echo "DEBUG: Found $FILE_COUNT C/H files" >&2
         
@@ -103,7 +101,6 @@ then
         echo "DEBUG: Files to add/update:" >&2
         echo "$CHANGED_FILES" >&2
         
-        # ファイルをDBに追加
         for file in $CHANGED_FILES; do
             if [ -f "$file" ]; then
                 echo "DEBUG: Adding file: $file" >&2
@@ -113,18 +110,15 @@ then
             fi
         done
         
-        # 解析を実行
         echo "DEBUG: Analyzing database..." >&2
         und analyze "$SCRIPT_DIR/$UND_DB_DIR"
         
-        # 解析後のファイル一覧を確認
         echo "DEBUG: Files in DB after analysis:" >&2
         und list files -db "$SCRIPT_DIR/$UND_DB_DIR" >&2
     else
         echo "WARNING: No files to analyze" >&2
     fi
     
-    # understand ディレクトリに戻る
     cd "$SCRIPT_DIR"
     
 else
@@ -158,10 +152,8 @@ else
     else
         # filesファイルがない場合、すべてのC/Cファイルを再帰的に追加
         echo "DEBUG: No files list found, searching recursively for all C/H files..." >&2
-        # すべてのサブディレクトリを再帰的に検索（.git と understand ディレクトリを除外）
-        FILES_TO_ADD=$(find . -type f \\( -name "*.c" -o -name "*.h" \\) ! -path "./.git/*" ! -path "./understand/*" | sed 's|^\./||')
+        FILES_TO_ADD=$(find . -type f '(' -name "*.c" -o -name "*.h" ')' ! -path "./.git/*" ! -path "./understand/*" | sed 's|^\./||')
         
-        # ファイル数をカウント
         FILE_COUNT=$(echo "$FILES_TO_ADD" | grep -c . || echo 0)
         echo "DEBUG: Found $FILE_COUNT C/H files" >&2
         
@@ -169,7 +161,6 @@ else
             echo "DEBUG: First 10 files found:" >&2
             echo "$FILES_TO_ADD" | head -10 >&2
             
-            # ファイルをDBに追加
             for file in $FILES_TO_ADD; do
                 if [ -f "$file" ]; then
                     echo "DEBUG: Adding file: $file" >&2
