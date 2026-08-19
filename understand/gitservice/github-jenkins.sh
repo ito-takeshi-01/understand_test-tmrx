@@ -21,88 +21,121 @@ post_review_comment() {
     local pr_number="$3"
     local comment_file="$4"
     
-    echo "=== post_review_comment DEBUG ==="
-    echo "Repository Owner: $repo_owner"
-    echo "Repository Name: $repo_name"
-    echo "PR Number: $pr_number"
-    echo "Comment File: $comment_file"
-    echo "================================="
+    echo "=== post_review_comment DEBUG ===" >&2
+    echo "Repository Owner: $repo_owner" >&2
+    echo "Repository Name: $repo_name" >&2
+    echo "PR Number: $pr_number" >&2
+    echo "Comment File: $comment_file" >&2
+    echo "=================================" >&2
     
+    # 引数チェック
     if [ -z "$repo_owner" ] || [ -z "$repo_name" ] || [ -z "$pr_number" ] || [ -z "$comment_file" ]; then
-        echo "Error: Missing required arguments"
+        echo "Error: Missing required arguments" >&2
         return 1
     fi
     
+    # ファイル存在チェック
     if [ ! -f "$comment_file" ]; then
-        echo "Error: Comment file not found: $comment_file"
+        echo "Error: Comment file not found: $comment_file" >&2
         return 1
     fi
     
+    # 空ファイルチェック
     if [ ! -s "$comment_file" ]; then
-        echo "Warning: Comment file is empty"
+        echo "Warning: Comment file is empty" >&2
         return 0
     fi
     
-    local comment_body
-    comment_body=$(cat "$comment_file")
-    
-    echo "=== Comment Content (first 200 chars) ==="
-    echo "$comment_body" | head -c 200
-    echo ""
-    echo "=========================================="
+    # コメント内容のプレビュー
+    echo "=== Comment Content (first 200 chars) ===" >&2
+    head -c 200 "$comment_file" >&2
+    echo "" >&2
+    echo "==========================================" >&2
     
     local api_url="https://api.github.com/repos/${repo_owner}/${repo_name}/issues/${pr_number}/comments"
-    echo "API URL: $api_url"
+    echo "API URL: $api_url" >&2
     
-    local json_body
+    # JSON生成（jqの--rawfileオプションを使用）
+    local payload
     if command -v jq &> /dev/null; then
-        echo "Using jq for JSON encoding"
-        json_body=$(echo "$comment_body" | jq -Rs .)
+        echo "Using jq for JSON encoding" >&2
+        # --rawfile でファイル全体を変数として読み込み、jqが自動的にエスケープ
+        payload=$(jq -n --rawfile body "$comment_file" '{body: $body}')
+        
+        if [ $? -ne 0 ]; then
+            echo "Error: Failed to create JSON payload with jq" >&2
+            return 1
+        fi
     elif command -v python3 &> /dev/null; then
-        echo "Using python3 for JSON encoding"
-        json_body=$(python3 -c "import json, sys; print(json.dumps(sys.stdin.read()))" <<< "$comment_body")
-    elif command -v python &> /dev/null; then
-        echo "Using python for JSON encoding"
-        json_body=$(python -c "import json, sys; print(json.dumps(sys.stdin.read()))" <<< "$comment_body")
+        echo "Using python3 for JSON encoding" >&2
+        payload=$(python3 -c "
+import json
+import sys
+
+try:
+    with open('$comment_file', 'r', encoding='utf-8') as f:
+        body = f.read()
+    print(json.dumps({'body': body}))
+except Exception as e:
+    print(f'Error: {e}', file=sys.stderr)
+    sys.exit(1)
+")
+        if [ $? -ne 0 ]; then
+            echo "Error: Failed to create JSON payload with python3" >&2
+            return 1
+        fi
     else
-        echo "Error: No JSON encoder found"
+        echo "Error: No JSON encoder found (jq or python3 required)" >&2
         return 1
     fi
     
-    echo "=== Escaped JSON (first 300 chars) ==="
-    echo "$json_body" | head -c 300
-    echo ""
-    echo "======================================="
+    # デバッグ: 生成されたペイロードの確認
+    echo "=== Generated Payload (first 300 chars) ===" >&2
+    echo "$payload" | head -c 300 >&2
+    echo "" >&2
+    echo "============================================" >&2
     
+    # GitHub APIへリクエスト送信
     local response
     response=$(curl -s -w "\n%{http_code}" -X POST \
         -H "Authorization: token ${GITHUB_TOKEN}" \
         -H "Accept: application/vnd.github.v3+json" \
-        -H "Content-Type: application/json" \
+        -H "Content-Type: application/json; charset=utf-8" \
         "$api_url" \
-        -d "{\"body\":$json_body}")
+        --data-binary "$payload")
     
+    # HTTPステータスコード取得
     local http_code
     http_code=$(echo "$response" | tail -n1)
     local response_body
     response_body=$(echo "$response" | sed '$d')
     
-    echo "HTTP Status Code: $http_code"
+    echo "" >&2
+    echo "===============================" >&2
+    echo "HTTP Status Code: $http_code" >&2
     
+    # 成功判定
     if [ "$http_code" = "201" ]; then
-        echo "Comment posted successfully to PR #${pr_number}"
+        echo "✓ Comment posted successfully to PR #${pr_number}" >&2
         if command -v jq &> /dev/null; then
-            echo "Comment URL: $(echo "$response_body" | jq -r '.html_url')"
+            local comment_url
+            comment_url=$(echo "$response_body" | jq -r '.html_url // empty')
+            if [ -n "$comment_url" ]; then
+                echo "Comment URL: $comment_url" >&2
+            fi
         fi
         return 0
     else
-        echo "Failed to post comment. HTTP status: $http_code"
-        echo "Response: $response_body"
-        echo ""
-        echo "=== Debug Info ==="
-        echo "Request body that was sent:"
-        echo "{\"body\":$json_body}"
-        echo "=================="
+        echo "✗ Failed to post comment. HTTP status: $http_code" >&2
+        echo "Response: $response_body" >&2
+        
+        # デバッグ情報
+        echo "" >&2
+        echo "=== Debug Info ===" >&2
+        echo "Payload that was sent:" >&2
+        echo "$payload" | head -n 20 >&2
+        echo "==================" >&2
+        
         return 1
     fi
 }
