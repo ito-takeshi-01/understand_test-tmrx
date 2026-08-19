@@ -77,6 +77,8 @@ then
     # ワークスペースに移動
     cd "$WORKSPACE_DIR"
     echo "DEBUG: Changed to workspace: $(pwd)" >&2
+    echo "DEBUG: Listing workspace contents:" >&2
+    ls -la | head -20 >&2
     
     # 変更されたファイルを取得
     echo "DEBUG: Getting changed files between $PREV_COMMIT and $GIT_COMMIT..." >&2
@@ -84,8 +86,9 @@ then
     
     if [ -z "$CHANGED_FILES" ]; then
         echo "DEBUG: No changed C/C++ files detected, using all C files..." >&2
-        # すべてのC/Cファイルを対象（構文を修正）
-        CHANGED_FILES=$(find . -maxdepth 1 -type f -name "*.c" -o -type f -name "*.h" | sed 's|^\./||')
+        # すべてのC/Cファイルを対象（括弧を追加）
+        CHANGED_FILES=$(find . -maxdepth 1 -type f '(' -name "*.c" -o -name "*.h" ')' | sed 's|^\./||')
+        echo "DEBUG: All C files found: $CHANGED_FILES" >&2
     fi
     
     if [ -n "$CHANGED_FILES" ]; then
@@ -137,15 +140,19 @@ else
     # ワークスペースに移動
     cd "$WORKSPACE_DIR"
     echo "DEBUG: Changed to workspace: $(pwd)" >&2
+    echo "DEBUG: Listing workspace contents:" >&2
+    ls -la | head -20 >&2
     
     # ファイルリストを確認
     if [ -f "$SCRIPT_DIR/files" ]; then
         echo "DEBUG: Adding files from files list..." >&2
         und add @"$SCRIPT_DIR/files" -db "$SCRIPT_DIR/$UND_DB_DIR"
     else
-        # filesファイルがない場合、すべてのC/Cファイルを追加（構文を修正）
+        # filesファイルがない場合、すべてのC/Cファイルを追加（括弧を追加）
         echo "DEBUG: No files list found, adding all C files..." >&2
-        FILES_TO_ADD=$(find . -maxdepth 1 -type f -name "*.c" -o -type f -name "*.h" | sed 's|^\./||')
+        FILES_TO_ADD=$(find . -maxdepth 1 -type f '(' -name "*.c" -o -name "*.h" ')' | sed 's|^\./||')
+        
+        echo "DEBUG: All C files found: $FILES_TO_ADD" >&2
         
         if [ -n "$FILES_TO_ADD" ]; then
             echo "DEBUG: Files to add:" >&2
