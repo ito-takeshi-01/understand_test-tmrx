@@ -86,8 +86,8 @@ then
     
     if [ -z "$CHANGED_FILES" ]; then
         echo "DEBUG: No changed C/C++ files detected, searching recursively for all C/H files..." >&2
-        # すべてのサブディレクトリを再帰的に検索（.git と understand ディレクトリを除外）
-        CHANGED_FILES=$(find . -type f '(' -name "*.c" -o -name "*.h" ')' \
+        # すべてのサブディレクトリを再帰的に検索（.git と understand ディレクトリを必ず除外）
+        CHANGED_FILES=$(find . -type f \\( -name "*.c" -o -name "*.h" \\) \
             ! -path "./.git/*" \
             ! -path "./understand/*" \
             | sed 's|^\./||')
@@ -161,8 +161,8 @@ else
     else
         # filesファイルがない場合、すべてのC/Cファイルを再帰的に追加
         echo "DEBUG: No files list found, searching recursively for all C/H files..." >&2
-        # すべてのサブディレクトリを再帰的に検索（.git と understand ディレクトリを除外）
-        FILES_TO_ADD=$(find . -type f '(' -name "*.c" -o -name "*.h" ')' \
+        # すべてのサブディレクトリを再帰的に検索（.git と understand ディレクトリを必ず除外）
+        FILES_TO_ADD=$(find . -type f \\( -name "*.c" -o -name "*.h" \\) \
             ! -path "./.git/*" \
             ! -path "./understand/*" \
             | sed 's|^\./||')

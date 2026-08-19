@@ -1,7 +1,9 @@
 #!/bin/sh -eux
-# 変更された関数のグラフをPRにフィードバック
 
+# スクリプトのディレクトリを取得
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# 外部スクリプトの読み込み
 . "$SCRIPT_DIR/gitservice/$GITSERVICE.sh"
 . "$SCRIPT_DIR/storage/$STORAGESERVICE.sh"
 
@@ -11,9 +13,8 @@ echo "DEBUG: GIT_PREVIOUS_COMMIT = '${GIT_PREVIOUS_COMMIT:-}'" >&2
 echo "DEBUG: GIT_PREVIOUS_SUCCESSFUL_COMMIT = '${GIT_PREVIOUS_SUCCESSFUL_COMMIT:-}'" >&2
 echo "DEBUG: CHANGE_ID = '${CHANGE_ID:-}'" >&2
 
-# 比較対象のコミットを決定（analyze.shと同じロジック）
+# 比較対象のコミットを決定
 if [ -n "${CHANGE_ID:-}" ]; then
-    # PRビルドの場合
     echo "DEBUG: This is a PR build (CHANGE_ID=$CHANGE_ID)" >&2
     
     if [ -n "${GIT_PREVIOUS_SUCCESSFUL_COMMIT:-}" ]; then
@@ -27,7 +28,6 @@ if [ -n "${CHANGE_ID:-}" ]; then
         echo "DEBUG: Using base commit (main branch) for comparison" >&2
     fi
 else
-    # PR以外のビルド
     echo "DEBUG: This is not a PR build" >&2
     
     if [ -n "${GIT_PREVIOUS_COMMIT:-}" ]; then
@@ -41,100 +41,112 @@ fi
 
 echo "DEBUG: PREV_COMMIT (final) = '$PREV_COMMIT'" >&2
 
-# 変数ファイルを読み込み（PREV_COMMITが定義された後）
+# 変数ファイルを読み込み
 . "$SCRIPT_DIR/variables"
 
-# デバッグ出力（variables読み込み後）
 echo "DEBUG: PREV_UND_DB_DIR = '$PREV_UND_DB_DIR'" >&2
 echo "DEBUG: UND_DB_DIR = '$UND_DB_DIR'" >&2
 
-# PRに対する実行か否か
-if ! is_change_request
-then
-    echo 'PRに対する実行ではありません。' 1>&2
-    exit 1
+# 比較DBの設定確認
+if [ -d "$SCRIPT_DIR/$PREV_UND_DB_DIR" ]; then
+    echo "DEBUG: Using comparison DB: $PREV_UND_DB_DIR" >&2
+else
+    echo "DEBUG: No comparison DB found, generating graphs without comparison" >&2
 fi
 
-# ベースブランチの Understand データベースが存在しない場合は終了
-if [ ! -d "$PREV_UND_DB_DIR" ]
-then
-    echo 'ベースブランチの Understand データベースが存在しないため、変更された関数の解析は実行されませんでした。'
-    exit 0
-fi
-
-# 比較設定は analyze.sh で設定済み
-echo "DEBUG: Using comparison DB: $PREV_UND_DB_DIR" >&2
-
-# 作業用ファイル・ディレクトリ
+# 変更された関数のリストを取得
 functions_list_file=$(mktemp)
-unique_names_list_file=$(mktemp)
-images_dir=$(mktemp -d)
-review_comment_table_file=$(mktemp)
-review_comment_images_file=$(mktemp)
-
-# スクリプト終了時のクリーンアップ
-cleanup() {
-    rm -rf "$functions_list_file" "$unique_names_list_file" "$images_dir" "$review_comment_table_file" "$review_comment_images_file"
-}
-trap cleanup EXIT
-
-# 変更された関数のリストを作成
 echo "DEBUG: Exporting changes..." >&2
 echo "DEBUG: Command: und export -db \"$UND_DB_DIR\" -changes -columns \"PercentChanged,Long Name,File Name,Unique Name\" -kinds \"Function, Procedure, Subroutine, Method\" \"$functions_list_file\"" >&2
 
-und export -db "$UND_DB_DIR" \
-    -changes \
-    -columns "PercentChanged,Long Name,File Name,Unique Name" \
-    -kinds "Function, Procedure, Subroutine, Method" \
-    "$functions_list_file" 2>&1 | tee /dev/stderr || true
+und export -db "$SCRIPT_DIR/$UND_DB_DIR" -changes -columns "PercentChanged,Long Name,File Name,Unique Name" -kinds "Function, Procedure, Subroutine, Method" "$functions_list_file" 2>&1 | tee /dev/stderr || true
 
+# ファイル内容をデバッグ出力
 echo "DEBUG: functions_list_file content:" >&2
 cat "$functions_list_file" >&2
 echo "DEBUG: Line count: $(wc -l < "$functions_list_file")" >&2
 
-if [ $(wc --lines < "$functions_list_file") -eq 1 ]
-then
-    echo '変更された関数はありません。'
-    exit 0
-fi
-sed -i '1d; s/"//g' "$functions_list_file"
-sort --general-numeric-sort --reverse --output="$functions_list_file" "$functions_list_file"
+# 一時ディレクトリを作成
+temp_dir=$(mktemp -d)
+echo "DEBUG: Temporary directory: $temp_dir" >&2
 
-# 変更された関数ごとに
-cat "$functions_list_file" | while IFS=, read -r rank function_name file_name unique_name
+# ヘッダー行をスキップして、2行目以降を処理
+tail -n +2 "$functions_list_file" | while IFS=, read -r percent_changed long_name file_name unique_name || [ -n "$unique_name" ]
 do
-    # _export_graphics_.pl に渡すエンティティ名
-    echo "$unique_name" >> "$unique_names_list_file"
-    # レビューコメントの表
-    echo "| $function_name | $rank | $file_name |" >> "$review_comment_table_file"
-    # レビューコメントの画像
-    generate_pr_review_comment "$GIT_REPO_OWNER" "$GIT_REPO_NAME" "$GIT_COMMIT" "$function_name" "$(echo "$unique_name" | sed -e 's/[\.:\/\\\,\ @]/_/g')" "$file_name" >> "$review_comment_images_file"
-done
-
-# 変更された関数の画像を生成・アップロード
-uperl "$SCRIPT_DIR/_export_graphics_.pl" \
-    -db "$UND_DB_DIR" \
-    -ents "$unique_names_list_file" \
-    -format svg \
-    -report "Control Flow" \
-    -dir "$images_dir" \
-    -options "Collapse=On;Comments=Off" \
-    -variant "Compare" \
-    1>&2
-for image_file in "$images_dir"/*.svg
-do
-    if [ "$image_file" != "$images_dir/*.svg" ]
+    # クォートを削除
+    percent_changed=$(echo "$percent_changed" | sed 's/"//g')
+    long_name=$(echo "$long_name" | sed 's/"//g')
+    file_name=$(echo "$file_name" | sed 's/"//g')
+    unique_name=$(echo "$unique_name" | sed 's/"//g')
+    
+    echo "DEBUG: Processing function: $long_name in $file_name (Changed: $percent_changed)" >&2
+    
+    # 安全なファイル名を生成（特殊文字を置換）
+    safe_unique_name=$(echo "$unique_name" | sed 's/[@\/\.]/_/g')
+    svg_file="$temp_dir/${safe_unique_name}.svg"
+    
+    echo "DEBUG: Generating graph for: $long_name -> $svg_file" >&2
+    
+    # グラフを生成
+    if und export -db "$SCRIPT_DIR/$UND_DB_DIR" "$unique_name" controlflow "$svg_file" 2>&1 | tee /dev/stderr
     then
-        put_image_file "$GIT_REPO_OWNER" "$GIT_REPO_NAME" "$GIT_COMMIT" "$image_file"
+        if [ -f "$svg_file" ]; then
+            echo "DEBUG: Graph generated: $long_name -> $svg_file" >&2
+            
+            # 画像ファイル名を生成
+            image_filename="${safe_unique_name}.svg"
+            image_output_path=$(get_image_storage_path "$GIT_REPO_OWNER" "$GIT_REPO_NAME" "$GIT_COMMIT" "$image_filename")
+            
+            # 画像を保存（デバッグメッセージはstderrへ）
+            echo "DEBUG: Saving image to: $image_output_path" >&2
+            if put_image "$GIT_REPO_OWNER" "$GIT_REPO_NAME" "$GIT_COMMIT" "$svg_file" "$image_output_path"
+            then
+                echo "DEBUG: Image saved successfully: $image_output_path" >&2
+                
+                # GitHubのraw URLを生成
+                if [ "$STORAGESERVICE" = "local" ]; then
+                    IMAGE_URL="file://$image_output_path"
+                    echo "DEBUG: Local image URL: $IMAGE_URL" >&2
+                else
+                    IMAGE_URL=$(get_image_url "$GIT_REPO_OWNER" "$GIT_REPO_NAME" "$GIT_COMMIT" "$image_filename")
+                    echo "DEBUG: Remote image URL: $IMAGE_URL" >&2
+                fi
+                
+                # マークダウン形式で出力（stdoutへ - これがPRコメントになる）
+                echo "## 🔄 関数: \`$long_name\` (変更率: $percent_changed)"
+                echo ""
+                echo "**ファイル:** \`$file_name\`"
+                echo ""
+                echo "### 制御フローグラフ"
+                echo ""
+                
+                if [ "$STORAGESERVICE" = "local" ]; then
+                    echo "> ⚠️ ローカルストレージモード: 画像は \`$image_output_path\` に保存されています"
+                else
+                    echo "![Control Flow Graph]($IMAGE_URL)"
+                fi
+                
+                echo ""
+                echo "---"
+                echo ""
+            else
+                echo "⚠️ 警告: 画像の保存に失敗しました: $long_name" >&2
+            fi
+        else
+            echo "⚠️ 警告: グラフファイルが生成されませんでした: $long_name" >&2
+        fi
+    else
+        echo "⚠️ 警告: グラフの生成に失敗しました: $long_name" >&2
     fi
 done
 
-# レビューコメントを出力
-cat <<-HEADER
-以下の関数が変更されました。
+# 変更された関数がない場合
+if [ $(wc -l < "$functions_list_file") -le 1 ]; then
+    echo "✅ 変更された関数はありません。"
+fi
 
-| 関数 | Percent Changed | ファイル |
-| -------- | -------- | -------- |
-HEADER
-cat "$review_comment_table_file"
-cat "$review_comment_images_file"
+# 一時ファイルとディレクトリをクリーンアップ
+rm -f "$functions_list_file"
+rm -rf "$temp_dir"
+
+echo "DEBUG: Graph generation completed" >&2

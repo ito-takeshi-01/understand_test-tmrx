@@ -2,3 +2,36 @@
 # 1 行につき 1 つの設定オプションを記載します。
 -Languages C++
 
+
+# =====================================
+# C/C++ コンパイラ設定
+# =====================================
+
+# 標準インクルードを使用
+-C++AnalyzePreprocessorUseDefaultIncludes
+Yes
+
+-C++AnalyzePreprocessorDefaultIncludesStd
+Yes
+
+# 標準Cの定義
+-C++AnalyzePreprocessorDefine
+__STDC__=1
+
+-C++AnalyzePreprocessorDefine
+__STDC_VERSION__=201112L
+
+# Windows環境の基本定義
+-C++AnalyzePreprocessorDefine
+_WIN32=1
+
+-C++AnalyzePreprocessorDefine
+_WIN64=1
+
+# 厳密モードを無効化（エラーを警告に変更）
+-C++AnalyzeStrictMode
+No
+
+# 不明な#includeを許可
+-C++AnalyzePreprocessorAllowUnknownIncludes
+Yes
