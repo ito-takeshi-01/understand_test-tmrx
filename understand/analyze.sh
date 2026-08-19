@@ -7,12 +7,42 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/gitservice/$GITSERVICE.sh"
 . "$SCRIPT_DIR/storage/$STORAGESERVICE.sh"
 
-# ベースコミットを取得（PRの場合はターゲットブランチのHEAD）
-PREV_COMMIT=$(get_base_commit)
-
-# デバッグ出力
-echo "DEBUG: PREV_COMMIT = '$PREV_COMMIT'" >&2
+# デバッグ: 利用可能なGit環境変数を表示
 echo "DEBUG: GIT_COMMIT = '$GIT_COMMIT'" >&2
+echo "DEBUG: GIT_PREVIOUS_COMMIT = '${GIT_PREVIOUS_COMMIT:-}'" >&2
+echo "DEBUG: GIT_PREVIOUS_SUCCESSFUL_COMMIT = '${GIT_PREVIOUS_SUCCESSFUL_COMMIT:-}'" >&2
+echo "DEBUG: CHANGE_ID = '${CHANGE_ID:-}'" >&2
+
+# 比較対象のコミットを決定
+if [ -n "${CHANGE_ID:-}" ]; then
+    # PRビルドの場合
+    echo "DEBUG: This is a PR build (CHANGE_ID=$CHANGE_ID)" >&2
+    
+    if [ -n "${GIT_PREVIOUS_SUCCESSFUL_COMMIT:-}" ]; then
+        PREV_COMMIT="$GIT_PREVIOUS_SUCCESSFUL_COMMIT"
+        echo "DEBUG: Using GIT_PREVIOUS_SUCCESSFUL_COMMIT for comparison" >&2
+    elif [ -n "${GIT_PREVIOUS_COMMIT:-}" ]; then
+        PREV_COMMIT="$GIT_PREVIOUS_COMMIT"
+        echo "DEBUG: Using GIT_PREVIOUS_COMMIT for comparison" >&2
+    else
+        # どちらもない場合は、mainブランチとの比較
+        PREV_COMMIT=$(get_base_commit)
+        echo "DEBUG: Using base commit (main branch) for comparison" >&2
+    fi
+else
+    # PR以外のビルド（mainブランチなど）
+    echo "DEBUG: This is not a PR build" >&2
+    
+    if [ -n "${GIT_PREVIOUS_COMMIT:-}" ]; then
+        PREV_COMMIT="$GIT_PREVIOUS_COMMIT"
+        echo "DEBUG: Using GIT_PREVIOUS_COMMIT for comparison" >&2
+    else
+        PREV_COMMIT=$(get_base_commit)
+        echo "DEBUG: Using base commit for comparison" >&2
+    fi
+fi
+
+echo "DEBUG: PREV_COMMIT = '$PREV_COMMIT'" >&2
 
 # 変数ファイルを読み込み（PREV_COMMITが定義された後）
 . "$SCRIPT_DIR/variables"
