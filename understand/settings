@@ -35,3 +35,27 @@ No
 # 不明な#includeを許可
 -C++AnalyzePreprocessorAllowUnknownIncludes
 Yes
+
+# =====================================
+# 追加設定: 欠落しているインクルードを無視
+# =====================================
+
+# 欠落しているシステムヘッダーを無視
+-C++IgnoreMissingIncludes
+on
+
+# C標準を指定
+-C++Standard
+c11
+
+# Visual Studioのパス検索を無効化（クロスプラットフォーム対応）
+-C++ParseUseVCPP
+No
+
+# Clangパーサーの設定
+-C++ParseUseClang
+Yes
+
+# 診断メッセージを警告レベルに抑制
+-C++DiagnosticSuppressLevel
+Warning
