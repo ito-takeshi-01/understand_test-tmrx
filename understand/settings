@@ -6,13 +6,61 @@
 # =====================================
 # C/C++ コンパイラ設定
 # =====================================
+# und settings の引数に使用するパラメータを列挙します。
+# 1 行につき 1 つの設定オプションを記載します。
 
-# 標準インクルードを使用
+# =====================================
+# 言語設定
+# =====================================
+-Languages
+C++
+
+# =====================================
+# Visual Studio を使用しない設定
+# =====================================
+
+# Visual Studio のパーサーを使用しない（重要！）
+-C++ParseUseVCPP
+No
+
+# Clang パーサーを使用（Understand 内蔵）
+-C++ParseUseClang
+Yes
+
+# =====================================
+# エラー無視設定
+# =====================================
+
+# 厳密モードを無効化
+-C++AnalyzeStrictMode
+No
+
+# 欠落しているインクルードファイルを無視
+-C++IgnoreMissingIncludes
+on
+
+# 不明な#includeを許可
+-C++AnalyzePreprocessorAllowUnknownIncludes
+Yes
+
+# =====================================
+# C標準設定
+# =====================================
+
+# C標準バージョン
+-C++Standard
+c11
+
+# 標準インクルードを使用（Understand内蔵）
 -C++AnalyzePreprocessorUseDefaultIncludes
 Yes
 
 -C++AnalyzePreprocessorDefaultIncludesStd
 Yes
+
+# =====================================
+# プリプロセッサ定義
+# =====================================
 
 # 標準Cの定義
 -C++AnalyzePreprocessorDefine
@@ -28,34 +76,13 @@ _WIN32=1
 -C++AnalyzePreprocessorDefine
 _WIN64=1
 
-# 厳密モードを無効化（エラーを警告に変更）
--C++AnalyzeStrictMode
-No
-
-# 不明な#includeを許可
--C++AnalyzePreprocessorAllowUnknownIncludes
-Yes
+-C++AnalyzePreprocessorDefine
+_MSC_VER=1900
 
 # =====================================
-# 追加設定: 欠落しているインクルードを無視
+# 診断設定
 # =====================================
 
-# 欠落しているシステムヘッダーを無視
--C++IgnoreMissingIncludes
-on
-
-# C標準を指定
--C++Standard
-c11
-
-# Visual Studioのパス検索を無効化（クロスプラットフォーム対応）
--C++ParseUseVCPP
-No
-
-# Clangパーサーの設定
--C++ParseUseClang
-Yes
-
-# 診断メッセージを警告レベルに抑制
+# 警告レベルを下げる
 -C++DiagnosticSuppressLevel
 Warning
