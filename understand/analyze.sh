@@ -85,10 +85,21 @@ then
     CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$PREV_COMMIT" "$GIT_COMMIT" | grep '\.[ch]$' || true)
     
     if [ -z "$CHANGED_FILES" ]; then
-        echo "DEBUG: No changed C/C++ files detected, using all C files..." >&2
-        # すべてのC/Cファイルを対象（括弧を追加）
-        CHANGED_FILES=$(find . -maxdepth 1 -type f '(' -name "*.c" -o -name "*.h" ')' | sed 's|^\./||')
-        echo "DEBUG: All C files found: $CHANGED_FILES" >&2
+        echo "DEBUG: No changed C/C++ files detected, searching recursively for all C/H files..." >&2
+        # すべてのサブディレクトリを再帰的に検索（.git と understand ディレクトリを除外）
+        CHANGED_FILES=$(find . -type f '(' -name "*.c" -o -name "*.h" ')' \
+            ! -path "./.git/*" \
+            ! -path "./understand/*" \
+            | sed 's|^\./||')
+        
+        # ファイル数をカウント
+        FILE_COUNT=$(echo "$CHANGED_FILES" | grep -c . || echo 0)
+        echo "DEBUG: Found $FILE_COUNT C/H files" >&2
+        
+        if [ $FILE_COUNT -gt 0 ]; then
+            echo "DEBUG: First 10 files found:" >&2
+            echo "$CHANGED_FILES" | head -10 >&2
+        fi
     fi
     
     if [ -n "$CHANGED_FILES" ]; then
@@ -148,16 +159,23 @@ else
         echo "DEBUG: Adding files from files list..." >&2
         und add @"$SCRIPT_DIR/files" -db "$SCRIPT_DIR/$UND_DB_DIR"
     else
-        # filesファイルがない場合、すべてのC/Cファイルを追加（括弧を追加）
-        echo "DEBUG: No files list found, adding all C files..." >&2
-        FILES_TO_ADD=$(find . -maxdepth 1 -type f '(' -name "*.c" -o -name "*.h" ')' | sed 's|^\./||')
+        # filesファイルがない場合、すべてのC/Cファイルを再帰的に追加
+        echo "DEBUG: No files list found, searching recursively for all C/H files..." >&2
+        # すべてのサブディレクトリを再帰的に検索（.git と understand ディレクトリを除外）
+        FILES_TO_ADD=$(find . -type f '(' -name "*.c" -o -name "*.h" ')' \
+            ! -path "./.git/*" \
+            ! -path "./understand/*" \
+            | sed 's|^\./||')
         
-        echo "DEBUG: All C files found: $FILES_TO_ADD" >&2
+        # ファイル数をカウント
+        FILE_COUNT=$(echo "$FILES_TO_ADD" | grep -c . || echo 0)
+        echo "DEBUG: Found $FILE_COUNT C/H files" >&2
         
-        if [ -n "$FILES_TO_ADD" ]; then
-            echo "DEBUG: Files to add:" >&2
-            echo "$FILES_TO_ADD" >&2
+        if [ $FILE_COUNT -gt 0 ]; then
+            echo "DEBUG: First 10 files found:" >&2
+            echo "$FILES_TO_ADD" | head -10 >&2
             
+            # ファイルをDBに追加
             for file in $FILES_TO_ADD; do
                 if [ -f "$file" ]; then
                     echo "DEBUG: Adding file: $file" >&2
