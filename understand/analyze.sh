@@ -74,6 +74,20 @@ then
     echo "DEBUG: Setting comparison DB..." >&2
     und settings -ComparisonProjectPath "$SCRIPT_DIR/$PREV_UND_DB_DIR" "$SCRIPT_DIR/$UND_DB_DIR"
     
+    # 既存DBに新しい設定を強制適用
+    echo "DEBUG: Applying new C/C++ settings to existing DB..." >&2
+    und settings -C++ParseUseVCPP No "$SCRIPT_DIR/$UND_DB_DIR"
+    und settings -C++ParseUseClang Yes "$SCRIPT_DIR/$UND_DB_DIR"
+    und settings -C++IgnoreMissingIncludes on "$SCRIPT_DIR/$UND_DB_DIR"
+    und settings -C++AnalyzeStrictMode No "$SCRIPT_DIR/$UND_DB_DIR"
+    und settings -C++AnalyzePreprocessorAllowUnknownIncludes Yes "$SCRIPT_DIR/$UND_DB_DIR"
+    
+    # 設定ファイルも再適用
+    if [ -f "$SCRIPT_DIR/settings" ]; then
+        echo "DEBUG: Re-applying settings file..." >&2
+        und settings @"$SCRIPT_DIR/settings" -db "$SCRIPT_DIR/$UND_DB_DIR"
+    fi
+    
     # ワークスペースに移動
     cd "$WORKSPACE_DIR"
     echo "DEBUG: Changed to workspace: $(pwd)" >&2
