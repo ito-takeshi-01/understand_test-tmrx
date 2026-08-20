@@ -2,6 +2,10 @@
 -Languages
 C++
 
--c++ParseUseClang off
-
--c++ParseUseVCPP off
+-C++CompilerHeaderSearchPath C:\ProgramData\mingw64\mingw64\include
+-C++CompilerHeaderSearchPath C:\ProgramData\mingw64\mingw64\x86_64-w64-mingw32\include
+-C++CompilerHeaderSearchPath C:\ProgramData\mingw64\mingw64\lib\gcc\x86_64-w64-mingw32\16.1.0\include
+-C++CompilerMacros __GNUC__=16
+-C++CompilerMacros __GNUC_MINOR__=1
+-C++CompilerMacros __MINGW32__=1
+-C++CompilerMacros __MINGW64__=1
