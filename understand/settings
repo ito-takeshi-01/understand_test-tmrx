@@ -2,6 +2,14 @@
 -Languages
 C++
 
-# C++ 標準
--C++Standard
-c11
+# Fuzzy パーサーを使用（コンパイラ不要）
+-C++Parser
+Fuzzy
+
+# 不足しているインクルードを無視
+-C++IgnoreMissingIncludes
+on
+
+# Strict モードを無効化
+-C++StrictMode
+off
