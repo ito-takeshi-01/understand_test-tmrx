@@ -22,7 +22,7 @@ int main(void) {
     // グループ分け
     if (n <= 20) {
         printf("グループＡ\n");
-    } else if (n <= 50) {
+    } else if (n <= 40) {
         printf("グループＢ\n");
     } else if (n <= 75) {
         printf("グループＣ\n");
