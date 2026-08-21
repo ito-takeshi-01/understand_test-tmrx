@@ -40,3 +40,12 @@ void final_test_function(int value) {
         printf("Failed: Value is %d\n", value);
     }
 }
+
+
+int calculate_sum(int a, int b) {
+    return a + b;
+}
+
+int calculate_product(int x, int y) {
+    return x * y;
+}
