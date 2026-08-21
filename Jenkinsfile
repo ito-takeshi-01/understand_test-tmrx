@@ -59,8 +59,8 @@ pipeline {
       steps {
         script {
           try {
-//            bat 'cd understand && "%GIT_BASH_PATH%" clean.sh'
-              echo 'Cleanup skipped (disabled for testing)'
+            bat 'cd understand && "%GIT_BASH_PATH%" clean.sh'
+//              echo 'Cleanup skipped (disabled for testing)'
           } catch (Exception e) {
             echo "Cleanup failed: ${e.message}"
           }
