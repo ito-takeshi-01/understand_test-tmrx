@@ -57,13 +57,13 @@ pipeline {
     
     stage('クリーンアップ') {
       steps {
-        script {
-          try {
-            bat 'cd understand && "%GIT_BASH_PATH%" clean.sh'
-          } catch (Exception e) {
-            echo "Cleanup failed: ${e.message}"
-          }
-        }
+//        script {
+//          try {
+//            bat 'cd understand && "%GIT_BASH_PATH%" clean.sh'
+//          } catch (Exception e) {
+//            echo "Cleanup failed: ${e.message}"
+//          }
+//        }
       }
     }
   }
