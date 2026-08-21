@@ -45,6 +45,10 @@ int calculate_sum(int a, int b) {
     return a + b;
 }
 
+int calculate_sum2(int c, int d) {
+    return c + d;
+}
+
 int calculate_product(int x, int y) {
     return x * y;
 }
