@@ -34,7 +34,7 @@ int main(void) {
 }
 
 void test_function(int value) {
-    if (value > 50) {
+    if (value > 60) {
         printf("Success: Value is %d\n", value);
     } else {
         printf("Failed: Value is %d\n", value);
