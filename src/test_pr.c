@@ -33,14 +33,13 @@ int main(void) {
     return 0;
 }
 
-void final_test_function(int value) {
+void test_function(int value) {
     if (value > 50) {
         printf("Success: Value is %d\n", value);
     } else {
         printf("Failed: Value is %d\n", value);
     }
 }
-
 
 int calculate_sum(int a, int b) {
     return a + b;
