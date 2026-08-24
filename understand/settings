@@ -1,4 +1,6 @@
-# und settings の引数に使用するパラメータを列挙します。
-# 1 行につき 1 つの設定オプションを記載します。
--Languages C++
+# 言語設定
+-Languages
+C++
 
+-C++UseStrict
+off

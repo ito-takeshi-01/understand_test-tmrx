@@ -1,9 +1,9 @@
 #!/bin/sh -eux
 
-# 外部スクリプトの読み込み
-. "${0%/*}/gitservice/${GITSERVICE}.sh"
-. "${0%/*}/storage/${STORAGESERVICE}.sh"
-. "${0%/*}/variables"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/gitservice/$GITSERVICE.sh"
+. "$SCRIPT_DIR/storage/$STORAGESERVICE.sh"
+. "$SCRIPT_DIR/variables"
 
 comment_file="$1"
-post_review_comment "${comment_file}"
+post_review_comment "$GIT_REPO_OWNER" "$GIT_REPO_NAME" "$CHANGE_ID" "$comment_file"
