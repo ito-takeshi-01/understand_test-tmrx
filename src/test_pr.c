@@ -41,6 +41,11 @@ void test_function(int value) {
     }
 }
 
+
+int calculate_product(int x, int y) {
+    return x * y;
+}
+
 int calculate_sum(int a, int b) {
     return a + b;
 }
@@ -49,6 +54,7 @@ int calculate_sum2(int c, int d) {
     return c + d;
 }
 
-int calculate_product(int x, int y) {
-    return x * y;
+int calculate_sum3(int e, int f) {
+    return e + f;
 }
+
